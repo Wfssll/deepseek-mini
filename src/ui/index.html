@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>deepseek-fast</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="../../node_modules/dompurify/dist/purify.min.js"></script>
+  <script defer src="renderer.js"></script>
+</head>
+<body>
+  <svg class="symbols" aria-hidden="true"><defs>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m6 12 6-6 6 6M12 6v13"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></symbol>
+    <symbol id="i-think" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></symbol>
+    <symbol id="i-new" viewBox="0 0 24 24"><path d="M11 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6M8 16l1-5L18 2l4 4-9 9Z"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 3h7v7M21 3 10 14M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/></symbol>
+  </defs></svg>
+  <main id="app">
+    <section id="setup" class="setup surface" hidden>
+      <header class="window-bar"><span>DEEPSEEK FAST <span class="version">0.01</span></span><button class="icon" data-action="hide" title="隐藏窗口"><svg><use href="#i-close"/></svg></button></header>
+      <div class="welcome"><div class="brand brand-large">d<span>·</span></div><h1 id="setup-title">让灵感，随叫随到。</h1><p id="setup-subtitle">一个快捷键，把 DeepSeek 带到你眼前。</p></div>
+      <div class="setup-step"><span class="step-number">1</span><div class="step-body"><div class="step-title">连接你的 DeepSeek <span id="login-badge" class="badge">等待登录</span></div><p>在官方网页完成登录，账号会留在这台 Mac。</p></div><button id="login" class="secondary">打开官网 <svg><use href="#i-external"/></svg></button></div>
+      <div class="setup-step shortcut-step"><span class="step-number">2</span><div class="step-body"><div class="step-title">选一个唤起快捷键</div><p>再次按下即可隐藏，随时继续上一段对话。</p><div class="shortcut-options"><button class="key-choice selected" data-shortcut="Command+Space"><kbd>⌘</kbd><kbd>Space</kbd><span>默认</span></button><button class="key-choice" data-shortcut="Alt+Space"><kbd>⌥</kbd><kbd>Space</kbd></button><button id="record" class="key-choice">自定义…</button></div><p id="shortcut-hint" class="hint">⌘ Space 通常用于 Spotlight。若被占用，请更换或 <button id="spotlight" class="text-button">调整系统快捷键 ↗</button></p></div></div>
+      <label id="autostart-row" class="checkbox-row"><input id="autostart" type="checkbox">登录 Mac 时在后台启动</label>
+      <p id="setup-error" class="error" role="alert" hidden></p>
+      <button id="finish" class="primary">完成设置，开始使用 <span>→</span></button>
+      <p class="setup-footer">非官方开源客户端 · 使用 DeepSeek 网页账号</p>
+    </section>
+
+    <section id="chat" hidden>
+      <div class="composer surface">
+        <div class="composer-top"><div class="brand" aria-label="deepseek-fast">d<span>·</span></div><textarea id="question" rows="1" placeholder="有什么想问的？" aria-label="输入问题"></textarea><div class="window-controls"><button class="icon" data-action="settings" title="设置"><svg><use href="#i-settings"/></svg></button><button class="icon" data-action="hide" title="隐藏 · Esc"><svg><use href="#i-close"/></svg></button></div></div>
+        <div id="files" class="files" hidden></div>
+        <div class="composer-bottom"><div class="tools"><button id="attach" class="attach" title="添加文件"><svg><use href="#i-plus"/></svg></button><span class="divider"></span><button id="think" class="mode" aria-pressed="false"><svg><use href="#i-think"/></svg>深度思考</button><button id="search" class="mode" aria-pressed="false"><svg><use href="#i-globe"/></svg>联网搜索</button></div><div class="send-group"><span id="shortcut-label" class="shortcut-label">⌘ Space</span><button id="send" class="send" title="发送 · Enter" disabled><svg><use href="#i-arrow"/></svg></button></div></div>
+      </div>
+      <div id="connection" class="connection" hidden><span id="connection-text"></span><button id="connect-action" class="text-button">打开官网 ↗</button></div>
+      <section id="response" class="response surface" hidden>
+        <header class="response-header"><span class="response-title"><span class="status-dot"></span>DeepSeek</span><div class="response-tools"><button id="new-chat" class="icon" title="新对话"><svg><use href="#i-new"/></svg></button><button id="copy" class="icon" title="复制回答"><svg><use href="#i-copy"/></svg></button><button id="full" class="icon" title="在完整官网中查看"><svg><use href="#i-external"/></svg></button></div></header>
+        <div class="response-scroll"><p id="prompt" class="prompt"></p><div id="waiting" class="waiting"><span class="thinking-dots"><i></i><i></i><i></i></span><span>正在等待 DeepSeek 网页回复</span></div><article id="answer" class="answer"></article></div>
+        <footer class="response-footer"><span id="answer-status">回答与官网同步</span><button id="stop" class="text-button" hidden>停止生成</button><span>Shift + Enter 换行</span></footer>
+      </section>
+      <div id="demo-label" class="demo-label" hidden>离线演示 · 此模式不会连接 DeepSeek 或产生真实 AI 回答</div>
+    </section>
+    <div id="toast" class="toast" role="alert" hidden></div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,12 @@
+const { execFileSync } = require('node:child_process');
+const { createHash } = require('node:crypto');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.join(__dirname, '..');
+const appPath = path.join(root, 'dist', `deepseek-fast-darwin-${process.arch}`, 'deepseek-fast.app');
+const zip = path.join(root, 'dist', `deepseek-fast-0.01-macos-${process.arch}.zip`);
+execFileSync('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', appPath, zip], { stdio: 'inherit' });
+const digest = createHash('sha256').update(fs.readFileSync(zip)).digest('hex');
+fs.writeFileSync(`${zip}.sha256`, `${digest}  ${path.basename(zip)}\n`);
+console.log(`Release archive: ${zip}`);
+console.log(`SHA256: ${digest}`);

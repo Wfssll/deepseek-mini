@@ -1,0 +1,33 @@
+{
+  "name": "deepseek-fast",
+  "productName": "deepseek-fast",
+  "version": "0.0.1",
+  "displayVersion": "0.01",
+  "description": "Bring DeepSeek to your fingertips: a global-hotkey macOS mini window with DeepThink, web search, and file attachments. No API key required.",
+  "main": "src/main.js",
+  "private": true,
+  "repository": { "type": "git", "url": "https://github.com/Wfssll/deepseek-fast.git" },
+  "homepage": "https://github.com/Wfssll/deepseek-fast#readme",
+  "bugs": { "url": "https://github.com/Wfssll/deepseek-fast/issues" },
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "demo": "electron . --demo",
+    "test": "node --test test/*.test.js",
+    "check": "node scripts/check.js",
+    "smoke": "electron . --smoke-test",
+    "build": "node scripts/build.js",
+    "release:zip": "node scripts/archive.js"
+  },
+  "dependencies": {
+    "dompurify": "3.4.16"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "electron": "44.5.1",
+    "jsdom": "27.4.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}
