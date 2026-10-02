@@ -8,6 +8,7 @@ let lastSize = '';
 let previewFont = null;
 let toastTimer;
 let submitting = false;
+let pasting = false;
 
 const shortcutLabel = value => value.replace(/CommandOrControl|Command/g, '⌘').replace(/Control/g, '⌃').replace(/Alt/g, '⌥').replace(/Shift/g, '⇧').replace(/\+/g, ' ');
 async function call(name, ...args) {
@@ -20,7 +21,7 @@ function fit() {
     if (!current) return;
     const height = element => element.hidden ? 0 : Math.ceil(element.getBoundingClientRect().height);
     const compactHeight = height(document.querySelector('.composer')) + height($('connection')) + height($('demo-label')) + height($('toast')) + 30;
-    const size = { view: current.view, expanded: !$('response').hidden, compactHeight, setupHeight: height($('setup')) + 30 };
+    const size = { view: current.view, expanded: !$('response').hidden, compactHeight, setupHeight: (current.view === 'help' ? height($('guide')) : height($('setup'))) + 30 };
     const key = JSON.stringify(size);
     if (key !== lastSize) { lastSize = key; window.mini.resize(size); }
   });
@@ -41,13 +42,14 @@ function choose(value) {
 function render(state) {
   current = state;
   applyFont(previewFont ?? state.settings.fontSize);
-  const setup = state.view !== 'chat';
-  $('setup').hidden = !setup; $('chat').hidden = setup;
+  const setup = ['setup', 'settings'].includes(state.view);
+  $('setup').hidden = !setup; $('chat').hidden = state.view !== 'chat'; $('guide').hidden = state.view !== 'help';
+  $('guide-shortcut').textContent = shortcutLabel(state.settings.shortcut);
   if (state.view !== lastView) {
     choose(state.settings.shortcut);
     $('autostart').checked = state.settings.launchAtLogin;
     $('setup-error').hidden = true;
-    if (!setup) setTimeout(() => $('question').focus(), 100);
+    if (state.view === 'chat') setTimeout(() => $('question').focus(), 100);
     lastView = state.view;
   }
   const settingsView = state.view === 'settings';
@@ -64,7 +66,8 @@ function render(state) {
     $(name).setAttribute('aria-pressed', String(state.website[name] === true));
     $(name).disabled = !ready || state.awaiting || state.website.generating;
   }
-  $('attach').disabled = !ready || state.awaiting || state.website.generating;
+  $('attach').disabled = !ready || state.awaiting || state.uploading || pasting || state.website.generating;
+  $('paste-image').disabled = $('attach').disabled;
   const existingFiles = [...$('files').children].map(el => el.textContent).join('\0');
   if (existingFiles !== state.attachments.join('\0')) {
     $('files').replaceChildren(...state.attachments.map(name => {
@@ -72,6 +75,14 @@ function render(state) {
     }));
   }
   $('files').hidden = !state.attachments.length;
+  const imageKey = (state.pastedImages || []).map(image => image.name).join('|');
+  if ($('images').dataset.key !== imageKey) {
+    $('images').dataset.key = imageKey;
+    $('images').replaceChildren(...(state.pastedImages || []).map(image => {
+      const preview = document.createElement('img'); preview.src = image.preview; preview.alt = image.name; preview.title = '已交给官网 · 等待解析后发送问题'; return preview;
+    }));
+  }
+  $('images').hidden = !(state.pastedImages || []).length;
   const messages = {
     loading: '正在连接 DeepSeek…', login: '登录官网后，就可以在这里提问。',
     challenge: '请在官网窗口完成安全验证。', blocked: '官网暂时限制了访问，请稍后重新连接。',
@@ -102,7 +113,7 @@ function render(state) {
   sendEnabled(); fit();
 }
 function sendEnabled() {
-  $('send').disabled = !current?.website.hasComposer || current.awaiting || current.website.generating || submitting || !$('question').value.trim();
+  $('send').disabled = !current?.website.hasComposer || current.awaiting || current.website.generating || current.uploading || pasting || submitting || !$('question').value.trim();
 }
 async function submit() {
   if ($('send').disabled) return;
@@ -134,6 +145,25 @@ document.addEventListener('keydown', event => {
 $('question').addEventListener('keydown', event => {
   if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); submit(); }
 });
+async function pastePictures(files = []) {
+  if (pasting) return;
+  pasting = true; sendEnabled(); $('paste-image').disabled = true; $('attach').disabled = true;
+  try {
+    if (!files.length) await call('pasteImage');
+    for (const file of files) {
+      if (file.size > 20 * 1024 * 1024) throw new Error('图片超过 20 MB，请通过加号选择文件。');
+      await call('pasteImage', { bytes: new Uint8Array(await file.arrayBuffer()) });
+    }
+  } catch (error) { toast(error.message); }
+  finally { pasting = false; render(current); }
+}
+$('question').addEventListener('paste', event => {
+  const files = [...(event.clipboardData?.files || [])].filter(file => file.type.startsWith('image/'));
+  const hasImage = files.length || [...(event.clipboardData?.items || [])].some(item => item.type.startsWith('image/'));
+  if (!hasImage) return;
+  event.preventDefault(); pastePictures(files);
+});
+$('paste-image').addEventListener('click', () => pastePictures());
 $('question').addEventListener('input', growInput);
 $('send').addEventListener('click', submit);
 for (const [id, action] of [['login', 'login'], ['full', 'login'], ['spotlight', 'spotlight'], ['attach', 'attach'], ['new-chat', 'newChat'], ['stop', 'stop']]) {

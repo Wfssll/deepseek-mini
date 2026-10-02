@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.03 — 2026-10-03
+
+- Paste screenshots and images into the mini composer with Command-V, or use the explicit paste-image button.
+- Upload pasted images through the official file input, show thumbnails, preserve question text, and avoid intercepting plain-text paste.
+- Use Electron’s current asynchronous ClipboardItem API for native clipboard images and text copying.
+- Guard uploads while submitting or generating; clean temporary pasted-image files on app exit.
+- Add an always-visible new-chat action to clear current attachments.
+- Add an in-app start / hide / paste / quit guide with optional terminal commands, plus explicit quit buttons in settings and the guide.
+- Show a visible DS menu-bar label and open the composer on a normal launch; keep login-item launches in the background.
+- Preserve existing sign-in sessions, shortcuts, window geometry, and font settings.
+
+Validation: 20 automated tests and Electron desktop regressions, including actual system clipboard image reads, PNG upload bytes, image previews, draft preservation, normal text paste, help, and quit. The installed app was also tested on the development Mac with the existing official account: Command-V image upload, official screenshot text recognition and answer synchronization, in-app quit, and relaunch.
+
+
 ## 0.02 — 2026-10-02
 
 Renamed the project and app to **deepseek-mini**, retaining existing local sign-in sessions and shortcut preferences.

@@ -7,6 +7,10 @@
 <script>
 for(const id of ['think','search'])document.getElementById(id).onclick=function(){this.setAttribute('aria-pressed',String(this.getAttribute('aria-pressed')!=='true'))};
 let timer;const stop=document.getElementById('stop');stop.onclick=()=>{clearInterval(timer);stop.hidden=true};
+window.uploadedFiles=[];
+document.querySelector('input[type=file]').onchange=async event=>{
+  for (const file of event.target.files) window.uploadedFiles.push({name:file.name,size:file.size,type:file.type,signature:Array.from(new Uint8Array(await file.arrayBuffer()).slice(0,8))});
+};
 window.sendCount=0;
 document.getElementById('send').onclick=()=>{
 const input=document.getElementById('chat-input');if(!input.value.trim()||!stop.hidden)return;

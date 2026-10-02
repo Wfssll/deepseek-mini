@@ -2,7 +2,7 @@
 
 **按一下，DeepSeek 就在眼前。**
 
-[![Version 0.02](https://img.shields.io/badge/version-0.02-4d6bfe)](https://github.com/Wfssll/deepseek-mini/releases/tag/v0.02)
+[![Version 0.03](https://img.shields.io/badge/version-0.03-4d6bfe)](https://github.com/Wfssll/deepseek-mini/releases/tag/v0.03)
 [![macOS](https://img.shields.io/badge/platform-macOS-252833)](https://github.com/Wfssll/deepseek-mini/releases)
 [![MIT License](https://img.shields.io/badge/license-MIT-379968)](LICENSE)
 
@@ -23,6 +23,10 @@
 
 ![Resized answer with larger font](docs/images/resized.png)
 
+![Image paste](docs/images/paste.png)
+
+![Start and quit guide](docs/images/help.png)
+
 截图来自独立离线演示；示例回复用于展示界面，不是真实 AI 回答。
 
 </details>
@@ -39,6 +43,9 @@
 | 窄输入条 | 平时只显示输入区和常用按钮，收到回复后展开回答卡片 |
 | 深度思考 | 在输入条直接切换，状态与官网同步 |
 | 联网搜索 | 对应当前官网的「智能搜索」选项 |
+| 粘贴图片 | 在输入框按 `⌘ V`，或点击「粘贴图片」；显示缩略图后输入问题，交由官网分析 |
+| 使用与退出说明 | 点击右上角 `?`，查看安装、启动、隐藏、图片粘贴与退出说明 |
+| 明确退出入口 | 使用说明和设置页均提供「退出应用」按钮；菜单栏显示 `DS` |
 | 添加文件 | 点击加号，选择文件交给官网上传和解析 |
 | 官网回复同步 | 持续同步网页已渲染的回答，支持复制与完整官网查看 |
 | 菜单栏常驻 | 关闭窗口即隐藏；快捷键或菜单栏均可找回 |
@@ -50,7 +57,7 @@
 
 ## 下载与使用
 
-从 **[GitHub Releases 下载 0.02](https://github.com/Wfssll/deepseek-mini/releases/tag/v0.02)**。
+从 **[GitHub Releases 下载 0.03](https://github.com/Wfssll/deepseek-mini/releases/tag/v0.03)**。
 
 首版提供 **Apple Silicon（M 系列 Mac）** 的应用包。Intel Mac 暂未提供预构建下载，可在对应机器上从源码构建。
 
@@ -64,11 +71,35 @@
 
 **快捷键冲突：** `Command + Space` 通常用于 Spotlight。程序会检查快捷键注册是否成功；如果已被占用，可使用设置中的系统快捷键入口调整 Spotlight，或选择 `Option + Space` / 自定义组合。程序不会自动改动系统快捷键。
 
-**退出应用：** 点击菜单栏图标，选择「退出 deepseek-mini」。关闭小窗本身只会隐藏。
+**退出应用：** 点击小窗右上角 `?` →「退出应用」，或设置页底部的「退出应用」。也可以点击顶部菜单栏的 `DS` →「退出 deepseek-mini」。关闭小窗的 × 或按 Esc 只会隐藏；真正退出后快捷键不会响应，需要重新启动应用。
 
-**分发状态：** 0.02 是早期公开版本，下载包尚未经过 Apple Developer 签名和公证。遇到 macOS 的开发者身份提示时，请确认下载来源为本仓库；也可以使用下面的源码运行方式。
+**分发状态：** 0.03 是早期公开版本，下载包尚未经过 Apple Developer 签名和公证。遇到 macOS 的开发者身份提示时，请确认下载来源为本仓库；也可以使用下面的源码运行方式。
 
-## 从 0.01 升级
+## 图片粘贴
+
+复制截图或图片的内容，在小窗输入框按 `⌘ V`；也可以点击「粘贴图片」读取剪贴板图片。小窗显示缩略图后，图片已交给官网上传，等待解析完成，再输入问题并发送。普通文字粘贴保持不变。当前剪贴板图片限制为 20 MB，更大的文件请使用加号上传。
+
+如果从「预览」复制出来的是文字，请切换图像选择工具；也可以使用 `Control + Command + Shift + 4` 将截图直接复制到剪贴板。图片理解、文字识别能力及可用额度以 DeepSeek 官网为准。点右上角「新对话」可以清空当前附件并开始新对话。
+
+## 启动与关闭
+
+先把 `.app` 拖进 Finder 的「应用程序」。首次从那里双击启动，完成网页登录和快捷键设置。此后使用快捷键显示 / 隐藏，或菜单栏 `DS` 打开小窗。应用内右上角 `?` 提供这些说明与真正的退出按钮。
+
+安装后也可以在终端启动：
+
+```bash
+open -a deepseek-mini
+```
+
+找不到退出入口时，关闭本应用主进程：
+
+```bash
+pkill -TERM -x deepseek-mini
+```
+
+从源码使用 `npm start` 启动时，在对应终端按 `Control + C` 结束。
+
+## 从 0.01 / 0.02 升级
 
 项目已从 `deepseek-fast` 更名为 `deepseek-mini`。先从菜单栏退出旧版，再打开新版，避免旧版继续占用快捷键。新版沿用相同的本机数据目录，保留已有网页登录会话、快捷键与开机启动设置；不需要删除或迁移账号数据。
 
@@ -111,7 +142,7 @@ npm run release:zip    # 生成下载 ZIP 和 SHA-256 校验文件
 
 应用输出至 `dist/deepseek-mini-darwin-<架构>/deepseek-mini.app`。界面截图和桌面测试结果输出至 `test-output/`。
 
-对外版本号为 **0.02**，对应 Git 标签 `v0.02`；内部 npm/macOS 版本使用等价的语义版本 `0.0.2`。
+对外版本号为 **0.03**，对应 Git 标签 `v0.03`；内部 npm/macOS 版本使用等价的语义版本 `0.0.3`。
 
 ## 工作方式与隐私
 
@@ -126,7 +157,7 @@ npm run release:zip    # 生成下载 ZIP 和 SHA-256 校验文件
 
 ## 当前边界
 
-0.02 已通过 17 项自动化检查与 Electron 桌面测试，覆盖后台按钮发送、延迟接收不重复发送、回复同步、边缘缩放、刷新时保持尺寸、隐藏再显示保持位置、字号调整与设置保存。0.01 的官网登录和真实回复曾在本机验证；0.02 此轮未完成线上账号回归，离线测试不能替代官网实测。
+0.03 已通过 20 项自动化检查与 Electron 桌面测试，覆盖系统剪贴板图片读取、粘贴图片上传与缩略图、问题文字保留、普通文本粘贴、退出按钮，以及此前的后台发送、窗口尺寸和字号记忆。安装版已在本机保留登录会话，并完成实际 Command-V 图片上传、官网截图文字识别与回答同步，以及应用内退出和重新启动验证。
 
 文件上传和解析、长时间后台运行、不同 macOS 版本及 Intel Mac 仍需要更多使用反馈。网页功能和使用额度由你的 DeepSeek 账号决定；官网改版可能需要更新适配器。登录过期、安全验证或访问受限时，请打开完整官网窗口处理。
 

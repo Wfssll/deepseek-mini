@@ -1,8 +1,8 @@
 {
   "name": "deepseek-mini",
   "productName": "deepseek-mini",
-  "version": "0.0.2",
-  "displayVersion": "0.02",
+  "version": "0.0.3",
+  "displayVersion": "0.03",
   "description": "Bring DeepSeek to your fingertips: a global-hotkey macOS mini window with DeepThink, web search, and file attachments. No API key required.",
   "main": "src/main.js",
   "private": true,
