@@ -1,25 +1,27 @@
-# deepseek-fast
+# deepseek-mini
 
 **按一下，DeepSeek 就在眼前。**
 
-[![Version 0.01](https://img.shields.io/badge/version-0.01-4d6bfe)](https://github.com/Wfssll/deepseek-fast/releases/tag/v0.01)
-[![macOS](https://img.shields.io/badge/platform-macOS-252833)](https://github.com/Wfssll/deepseek-fast/releases)
+[![Version 0.02](https://img.shields.io/badge/version-0.02-4d6bfe)](https://github.com/Wfssll/deepseek-mini/releases/tag/v0.02)
+[![macOS](https://img.shields.io/badge/platform-macOS-252833)](https://github.com/Wfssll/deepseek-mini/releases)
 [![MIT License](https://img.shields.io/badge/license-MIT-379968)](LICENSE)
 
-`deepseek-fast` 将 DeepSeek 官方网页版变成一个可以用全局快捷键唤起的 macOS 小窗。写作、读文档、写代码时，按一下快捷键，在窄输入条里提问；回答在下方展开，再按一下就收起，继续手头的工作。
+`deepseek-mini` 将 DeepSeek 官方网页版变成一个可以用全局快捷键唤起的 macOS 小窗。写作、读文档、写代码时，按一下快捷键，在窄输入条里提问；回答在下方展开，再按一下就收起，继续手头的工作。
 
 使用你的 DeepSeek 网页账号，支持深度思考、联网搜索与文件上传入口，**无需 API Key**。
 
 **A keyboard-first macOS mini window for DeepSeek.** Toggle it from anywhere, ask in a compact composer, and read replies in an expandable card. Uses your official web account with DeepThink, web search, and file attachments. No API key required.
 
-![deepseek-fast compact window](docs/images/compact.png)
+![deepseek-mini compact window](docs/images/compact.png)
 
 <details>
 <summary>查看回答卡片与首次设置</summary>
 
 ![Expandable answer card](docs/images/answer.png)
 
-![First-run setup](docs/images/setup.png)
+![Font settings](docs/images/setup.png)
+
+![Resized answer with larger font](docs/images/resized.png)
 
 截图来自独立离线演示；示例回复用于展示界面，不是真实 AI 回答。
 
@@ -27,7 +29,7 @@
 
 ## 为什么做这个小窗
 
-一个问题不应该打断整段工作。`deepseek-fast` 把常用的提问入口留在快捷键后面：不必寻找浏览器标签页，也不必始终占用一整块屏幕。需要完整的会话、登录或网页功能时，可以随时打开程序内的官方网页窗口。
+一个问题不应该打断整段工作。`deepseek-mini` 把常用的提问入口留在快捷键后面：不必寻找浏览器标签页，也不必始终占用一整块屏幕。需要完整的会话、登录或网页功能时，可以随时打开程序内的官方网页窗口。
 
 ## 已有功能
 
@@ -41,33 +43,44 @@
 | 官网回复同步 | 持续同步网页已渲染的回答，支持复制与完整官网查看 |
 | 菜单栏常驻 | 关闭窗口即隐藏；快捷键或菜单栏均可找回 |
 | 本地登录会话 | 首次在官网窗口登录，后续复用本机保存的会话 |
+| 拖动与缩放 | 拖动顶部小横线或回答标题栏；在边缘或四角调整宽度与回答区域高度 |
+| 位置与尺寸记忆 | 隐藏、重新唤起及重启后保留；显示器变化时自动移回可见区域 |
+| 字号调整 | 设置中选择 12–24 px，输入与回答同步调整，自动保存 |
 | 登录 Mac 时启动 | 可在设置中开启，默认关闭 |
 
 ## 下载与使用
 
-从 **[GitHub Releases 下载 0.01](https://github.com/Wfssll/deepseek-fast/releases/tag/v0.01)**。
+从 **[GitHub Releases 下载 0.02](https://github.com/Wfssll/deepseek-mini/releases/tag/v0.02)**。
 
 首版提供 **Apple Silicon（M 系列 Mac）** 的应用包。Intel Mac 暂未提供预构建下载，可在对应机器上从源码构建。
 
-1. 解压下载包，将 `deepseek-fast.app` 拖入「应用程序」文件夹，打开应用。
+1. 解压下载包，将 `deepseek-mini.app` 拖入「应用程序」文件夹，打开应用。
 2. 首次启动点击「打开官网」，在程序自己的 DeepSeek 官方网页登录账号。
 3. 返回设置窗口，选择唤起快捷键，点击「完成设置」。
 4. 按快捷键打开输入条，输入问题并按 `Enter`；使用 `Shift + Enter` 换行。
-5. 按同一个快捷键或 `Esc` 收起小窗，对话继续留在后台。
+5. 拖动顶部的小横线移动窗口；回答展开后拖动边缘或四角调整阅读区域。位置、宽度与展开高度会自动记住。
+6. 点击右上角设置按钮，用「显示字号」滑块调整大小，立即预览并自动保存。
+7. 按同一个快捷键或 `Esc` 收起小窗，对话继续留在后台。
 
 **快捷键冲突：** `Command + Space` 通常用于 Spotlight。程序会检查快捷键注册是否成功；如果已被占用，可使用设置中的系统快捷键入口调整 Spotlight，或选择 `Option + Space` / 自定义组合。程序不会自动改动系统快捷键。
 
-**退出应用：** 点击菜单栏图标，选择「退出 deepseek-fast」。关闭小窗本身只会隐藏。
+**退出应用：** 点击菜单栏图标，选择「退出 deepseek-mini」。关闭小窗本身只会隐藏。
 
-**分发状态：** 0.01 是早期公开版本，下载包尚未经过 Apple Developer 签名和公证。遇到 macOS 的开发者身份提示时，请确认下载来源为本仓库；也可以使用下面的源码运行方式。
+**分发状态：** 0.02 是早期公开版本，下载包尚未经过 Apple Developer 签名和公证。遇到 macOS 的开发者身份提示时，请确认下载来源为本仓库；也可以使用下面的源码运行方式。
+
+## 从 0.01 升级
+
+项目已从 `deepseek-fast` 更名为 `deepseek-mini`。先从菜单栏退出旧版，再打开新版，避免旧版继续占用快捷键。新版沿用相同的本机数据目录，保留已有网页登录会话、快捷键与开机启动设置；不需要删除或迁移账号数据。
+
+0.02 改为点击官网发送按钮，并等待最多 8 秒确认接收，解决后台窗口回车无响应及 0.4 秒确认过早的问题。若官网仍在解析文件或网络未就绪，输入内容会保留，提示查看完整官网；程序不会自动重复发送。
 
 ## 从源码运行
 
 需要 macOS、**Node.js 22.12 或更新版本**，以及能连接 npm、Electron 下载源和 DeepSeek 的网络。
 
 ```bash
-git clone https://github.com/Wfssll/deepseek-fast.git
-cd deepseek-fast
+git clone https://github.com/Wfssll/deepseek-mini.git
+cd deepseek-mini
 npm ci
 npm start
 ```
@@ -96,9 +109,9 @@ npm run build          # 构建当前 Mac 架构的 .app
 npm run release:zip    # 生成下载 ZIP 和 SHA-256 校验文件
 ```
 
-应用输出至 `dist/deepseek-fast-darwin-<架构>/deepseek-fast.app`。界面截图和桌面测试结果输出至 `test-output/`。
+应用输出至 `dist/deepseek-mini-darwin-<架构>/deepseek-mini.app`。界面截图和桌面测试结果输出至 `test-output/`。
 
-对外版本号为 **0.01**，对应 Git 标签 `v0.01`；内部 npm/macOS 版本使用等价的语义版本 `0.0.1`。
+对外版本号为 **0.02**，对应 Git 标签 `v0.02`；内部 npm/macOS 版本使用等价的语义版本 `0.0.2`。
 
 ## 工作方式与隐私
 
@@ -113,7 +126,7 @@ npm run release:zip    # 生成下载 ZIP 和 SHA-256 校验文件
 
 ## 当前边界
 
-首版已通过 12 项自动化检查与桌面交互测试，正式应用的官网登录、提问、真实回复同步和搜索状态也已在本机验证。
+0.02 已通过 17 项自动化检查与 Electron 桌面测试，覆盖后台按钮发送、延迟接收不重复发送、回复同步、边缘缩放、刷新时保持尺寸、隐藏再显示保持位置、字号调整与设置保存。0.01 的官网登录和真实回复曾在本机验证；0.02 此轮未完成线上账号回归，离线测试不能替代官网实测。
 
 文件上传和解析、长时间后台运行、不同 macOS 版本及 Intel Mac 仍需要更多使用反馈。网页功能和使用额度由你的 DeepSeek 账号决定；官网改版可能需要更新适配器。登录过期、安全验证或访问受限时，请打开完整官网窗口处理。
 
@@ -131,7 +144,7 @@ test/                自动化测试与离线演示网页
 
 ## 反馈与贡献
 
-欢迎通过 **[Issues](https://github.com/Wfssll/deepseek-fast/issues)** 提交问题与想法，或通过 Pull Request 参与改进。反馈问题时，请说明 macOS 版本、机器架构、复现步骤与预期行为；截图前请隐藏账号和私人聊天内容。
+欢迎通过 **[Issues](https://github.com/Wfssll/deepseek-mini/issues)** 提交问题与想法，或通过 Pull Request 参与改进。反馈问题时，请说明 macOS 版本、机器架构、复现步骤与预期行为；截图前请隐藏账号和私人聊天内容。
 
 ## 许可证与声明
 

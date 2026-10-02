@@ -2,13 +2,13 @@ const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, nativeImage, sc
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { HOME_URL, readSettings, writeSettings, changeShortcut, isOfficialURL } = require('./core');
+const { HOME_URL, readSettings, writeSettings, changeShortcut, isOfficialURL, normalizeAppearance, fitBounds } = require('./core');
 const { websiteOperation } = require('./adapter');
 
 const demo = process.argv.includes('--demo');
 const smoke = process.argv.includes('--smoke-test');
 const fixture = demo || smoke;
-app.setName('deepseek-fast');
+app.setName('deepseek-mini');
 // Preserve the original prototype's browser session and settings on upgrade.
 if (app.isPackaged && process.platform === 'darwin') app.setPath('userData', path.join(app.getPath('appData'), 'DeepSeek Mini'));
 if (!app.isPackaged) app.setPath('userData', path.join(__dirname, '..', '.runtime', fixture ? 'demo-profile' : 'profile'));
@@ -16,7 +16,9 @@ if (smoke) app.setPath('userData', path.join(__dirname, '..', '.runtime', `smoke
 const acquired = app.requestSingleInstanceLock({ demo: fixture });
 if (!acquired) app.quit();
 
-let miniWindow, website, tray, timer;
+let miniWindow, website, tray, timer, saveTimer;
+let layout = { view: 'setup', expanded: false, compactHeight: 150, setupHeight: 650 };
+let resizeOrigin;
 let quitting = false;
 let registered = null;
 let settings;
@@ -80,21 +82,48 @@ async function poll() {
   finally { polling = false; }
 }
 
-function resize(height) {
-  const display = screen.getDisplayMatching(miniWindow.getBounds()).workArea;
-  const safeHeight = Math.round(Math.max(150, Math.min(Number(height) || 190, Math.min(740, display.height - 48))));
+function rememberBounds() {
   const bounds = miniWindow.getBounds();
-  miniWindow.setBounds({ x: Math.max(display.x, Math.min(bounds.x, display.x + display.width - bounds.width)),
-    y: Math.max(display.y + 16, Math.min(bounds.y, display.y + display.height - safeHeight - 16)),
-    width: bounds.width, height: safeHeight });
+  settings.window = { ...settings.window, x: bounds.x, y: bounds.y, width: bounds.width,
+    ...(layout.view === 'chat' && layout.expanded ? { expandedHeight: bounds.height } : {}) };
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => writeSettings(app.getPath('userData'), settings), 250);
+}
+
+function resize(value) {
+  if (!value || !['chat', 'setup', 'settings'].includes(value.view)) return;
+  layout = { view: value.view, expanded: value.expanded === true,
+    compactHeight: Math.max(140, Math.min(450, Number(value.compactHeight) || 150)),
+    setupHeight: Math.max(500, Math.min(1000, Number(value.setupHeight) || 650)) };
+  const bounds = miniWindow.getBounds();
+  const area = screen.getDisplayMatching(bounds).workArea;
+  const minimum = layout.view !== 'chat' ? 500 : layout.expanded ? Math.max(320, layout.compactHeight + 150) : layout.compactHeight;
+  const height = layout.view !== 'chat' ? layout.setupHeight : layout.expanded ? Math.max(minimum, settings.window.expandedHeight) : layout.compactHeight;
+  miniWindow.setMinimumSize(460, Math.min(minimum, area.height));
+  miniWindow.setBounds(fitBounds({ ...bounds, height }, area));
+}
+
+function resizeDrag(value) {
+  if (value?.phase === 'start' && ['n','s','e','w','ne','nw','se','sw'].includes(value.edge)) {
+    resizeOrigin = { ...miniWindow.getBounds(), edge: value.edge }; return;
+  }
+  if (value?.phase === 'end') { resizeOrigin = null; return; }
+  if (!resizeOrigin || !Number.isFinite(value?.dx) || !Number.isFinite(value?.dy)) return;
+  const origin = resizeOrigin;
+  const edge = origin.edge;
+  const [minWidth, minHeight] = miniWindow.getMinimumSize();
+  const width = Math.max(minWidth, Math.min(1800, origin.width + (edge.includes('w') ? -value.dx : edge.includes('e') ? value.dx : 0)));
+  const height = layout.expanded || layout.view !== 'chat' ? Math.max(minHeight, Math.min(1600, origin.height + (edge.includes('n') ? -value.dy : edge.includes('s') ? value.dy : 0))) : origin.height;
+  const bounds = { x: origin.x + (edge.includes('w') ? origin.width - width : 0),
+    y: origin.y + (edge.includes('n') ? origin.height - height : 0), width, height };
+  miniWindow.setBounds(fitBounds(bounds, screen.getDisplayMatching(bounds).workArea));
 }
 
 function showMini(nextView) {
   if (nextView) view = nextView;
   if (process.platform === 'darwin') app.dock.hide();
-  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
   const bounds = miniWindow.getBounds();
-  miniWindow.setPosition(Math.round(area.x + (area.width - bounds.width) / 2), Math.round(area.y + Math.min(180, area.height * 0.2)));
+  miniWindow.setBounds(fitBounds(bounds, screen.getDisplayMatching(bounds).workArea));
   publish();
   miniWindow.show();
   miniWindow.focus();
@@ -114,7 +143,7 @@ function makeTray() {
   const icon = nativeImage.createFromDataURL('data:image/png;base64,' + fs.readFileSync(path.join(__dirname, 'assets', 'tray.png')).toString('base64'));
   icon.setTemplateImage(true);
   tray = new Tray(icon);
-  tray.setToolTip('deepseek-fast');
+  tray.setToolTip('deepseek-mini');
   updateTray();
 }
 
@@ -124,10 +153,10 @@ function updateTray() {
     { label: '打开 DeepSeek 官网 / 登录', click: openWebsite },
     { label: '新对话', click: () => { newChat().catch(error => { notice = error.message; publish(); }); showMini('chat'); } },
     { type: 'separator' },
-    { label: '设置快捷键…', click: () => showMini('settings') },
+    { label: '设置快捷键与字号…', click: () => showMini('settings') },
     { label: '重新加载官网', click: () => website.webContents.reload() },
     { type: 'separator' },
-    { label: '退出 deepseek-fast', click: () => { quitting = true; app.quit(); } }
+    { label: '退出 deepseek-mini', click: () => { quitting = true; app.quit(); } }
   ]));
 }
 
@@ -164,13 +193,19 @@ function configureHandlers() {
   handle('login', openWebsite);
   handle('settings', () => { view = 'settings'; publish(); });
   handle('resize', resize);
+  handle('resize-drag', resizeDrag);
+  handle('appearance', value => {
+    const fontSize = normalizeAppearance(value).fontSize;
+    settings = { ...settings, fontSize };
+    writeSettings(app.getPath('userData'), settings); publish(); return fontSize;
+  });
   handle('setup', async value => {
     if (!value || typeof value !== 'object') throw new Error('设置无效。');
     await poll();
     if (!websiteState.hasComposer && !settings.setupComplete) throw new Error('请先在官网完成登录，等到输入框可用后再继续。');
     const previous = registered;
     const next = changeShortcut(globalShortcut, registered, value.shortcut, toggle);
-    const saved = { shortcut: next, setupComplete: true, launchAtLogin: value.launchAtLogin === true };
+    const saved = { ...settings, shortcut: next, setupComplete: true, launchAtLogin: value.launchAtLogin === true };
     try {
       writeSettings(app.getPath('userData'), saved);
     } catch (error) {
@@ -189,11 +224,17 @@ function configureHandlers() {
     sending = true;
     try {
       const baseline = await remote('fill', text);
-      await new Promise(resolve => setTimeout(resolve, 80));
-      website.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Return' });
-      website.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Return' });
-      await new Promise(resolve => setTimeout(resolve, 400));
-      if (!(await remote('accepted', text))) throw new Error('官网还未接收问题。请打开官网查看文件是否解析完成，或使用官网发送按钮。');
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await remote('submit');
+      let accepted = false;
+      const deadline = Date.now() + 8000;
+      while (Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 150));
+        if (await remote('accepted', text)) { accepted = true; break; }
+        const status = await remote('snapshot');
+        if (status.errors) throw new Error(status.errors);
+      }
+      if (!accepted) throw new Error('官网尚未确认接收。问题已保留；请打开官网查看文件解析或网络状态，再决定是否发送。');
       prompt = text; answerHTML = ''; notice = '';
       awaiting = { ...baseline, started: Date.now() };
       publish();
@@ -221,16 +262,24 @@ function configureHandlers() {
 }
 
 function createWindows() {
-  miniWindow = new BrowserWindow({ width: 672, height: 570, frame: false, transparent: true, hasShadow: true,
-    resizable: false, maximizable: false, minimizable: false, show: false, alwaysOnTop: true,
+  const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+  const saved = settings.window;
+  const initial = fitBounds({ width: saved.width, height: 650,
+    x: saved.x ?? Math.round(area.x + (area.width - saved.width) / 2),
+    y: saved.y ?? Math.round(area.y + Math.min(180, area.height * 0.2)) },
+    screen.getDisplayMatching({ x: saved.x ?? area.x, y: saved.y ?? area.y, width: saved.width, height: 650 }).workArea);
+  miniWindow = new BrowserWindow({ ...initial, minWidth: 460, minHeight: 140, frame: false, transparent: true, hasShadow: true,
+    resizable: true, maximizable: false, minimizable: false, show: false, alwaysOnTop: true,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), nodeIntegration: false, contextIsolation: true, sandbox: true } });
+  miniWindow.on('move', rememberBounds);
+  miniWindow.on('resize', rememberBounds);
   miniWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   miniWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   miniWindow.webContents.on('will-navigate', event => event.preventDefault());
   miniWindow.on('close', event => { if (!quitting) { event.preventDefault(); miniWindow.hide(); } });
 
   website = new BrowserWindow({ width: 1060, height: 780, minWidth: 720, minHeight: 500, show: false,
-    title: fixture ? 'deepseek-fast · 离线演示网页' : 'DeepSeek · 官方网页登录',
+    title: fixture ? 'deepseek-mini · 离线演示网页' : 'DeepSeek · 官方网页登录',
     webPreferences: { partition: 'persist:deepseek', nodeIntegration: false, contextIsolation: true,
       sandbox: true, backgroundThrottling: false, spellcheck: false } });
   // Use an ordinary Chromium UA. No request interception or private API is involved.
@@ -274,7 +323,7 @@ async function smokeTest() {
   await delay(400);
   fs.writeFileSync(path.join(output, 'compact.png'), (await miniWindow.webContents.capturePage()).toPNG());
   const invoke = script => miniWindow.webContents.executeJavaScript(script, true);
-  const result = await invoke("window.mini.send('请介绍一下 deepseek-fast 的使用方式')");
+  const result = await invoke("window.mini.send('请介绍一下 deepseek-mini 的使用方式')");
   if (!result.ok) throw new Error(result.error);
   await delay(3500); await poll();
   if (!answerHTML.includes('快捷键')) throw new Error('Website answer was not synchronized');
@@ -284,9 +333,25 @@ async function smokeTest() {
   if (!toggled.ok || toggled.value.think !== true) throw new Error('DeepThink did not toggle');
   const invalid = await website.webContents.executeJavaScript("typeof window.mini === 'undefined'");
   if (!invalid) throw new Error('Privileged bridge leaked into the remote page');
+  if (await website.webContents.executeJavaScript('window.sendCount') !== 1) throw new Error('Submission was duplicated');
+  const resized = await invoke("window.mini.resizeDrag({phase:'start',edge:'se'}).then(()=>window.mini.resizeDrag({dx:100,dy:90})).then(()=>window.mini.resizeDrag({phase:'end'}))");
+  if (!resized.ok) throw new Error(resized.error);
+  const remembered = miniWindow.getBounds();
+  miniWindow.setPosition(remembered.x - 20, remembered.y - 10);
+  await delay(1000); await poll();
+  const stable = miniWindow.getBounds();
+  if (stable.width !== remembered.width || stable.height !== remembered.height) throw new Error('Streaming overwrote window dimensions');
+  const font = await invoke("window.mini.appearance({fontSize:20})");
+  if (!font.ok) throw new Error(font.error);
+  await delay(400);
+  if (await invoke("getComputedStyle(document.getElementById('answer')).fontSize") !== '20px') throw new Error('Font setting did not apply');
+  const saved = readSettings(app.getPath('userData'));
+  if (saved.fontSize !== 20 || saved.window.width !== stable.width || saved.window.expandedHeight !== stable.height) throw new Error('Appearance was not persisted');
+  fs.writeFileSync(path.join(output, 'resized.png'), (await miniWindow.webContents.capturePage()).toPNG());
   toggle(); if (miniWindow.isVisible()) throw new Error('Hide failed');
   toggle(); if (!miniWindow.isVisible()) throw new Error('Show failed');
-  fs.writeFileSync(path.join(output, 'smoke.json'), JSON.stringify({ passed: true, checks: ['onboarding', 'compact composer', 'official-page-shaped send and streaming', 'mode toggle', 'remote isolation', 'hide/show'] }, null, 2));
+  if (JSON.stringify(miniWindow.getBounds()) !== JSON.stringify(stable)) throw new Error('Show moved the remembered window');
+  fs.writeFileSync(path.join(output, 'smoke.json'), JSON.stringify({ passed: true, checks: ['onboarding', 'compact composer', 'official-page-shaped send and streaming', 'mode toggle', 'remote isolation', 'hide/show', 'delayed acknowledgement without duplicate send', 'edge resize preserved during polling', 'position memory', 'font change and settings persistence'] }, null, 2));
   console.log('Smoke test passed. Screenshots: test-output/');
   quitting = true; app.quit();
 }
@@ -303,7 +368,7 @@ if (acquired) {
     configureHandlers(); createWindows(); makeTray();
     if (process.platform === 'darwin') app.dock.hide();
     if (app.isPackaged && process.platform === 'darwin' && settings.launchAtLogin) app.setLoginItemSettings({ openAtLogin: true, openAsHidden: true });
-    Menu.setApplicationMenu(Menu.buildFromTemplate([{ label: 'deepseek-fast', submenu: [
+    Menu.setApplicationMenu(Menu.buildFromTemplate([{ label: 'deepseek-mini', submenu: [
       { label: '设置…', accelerator: 'CommandOrControl+,', click: () => showMini('settings') },
       { role: 'quit', label: '退出' }
     ] }, { role: 'editMenu', label: '编辑' }]));
@@ -312,6 +377,6 @@ if (acquired) {
   });
   app.on('activate', () => { if (miniWindow) showMini(settings.setupComplete ? 'chat' : 'setup'); });
   app.on('window-all-closed', event => { /* A tray application stays alive. */ });
-  app.on('before-quit', () => { quitting = true; clearInterval(timer); });
+  app.on('before-quit', () => { quitting = true; clearInterval(timer); clearTimeout(saveTimer); if (settings) writeSettings(app.getPath('userData'), settings); });
   app.on('will-quit', () => globalShortcut.unregisterAll());
 }

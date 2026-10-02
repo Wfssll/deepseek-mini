@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>deepseek-fast</title>
+  <title>deepseek-mini</title>
   <link rel="stylesheet" href="style.css">
   <script defer src="../../node_modules/dompurify/dist/purify.min.js"></script>
   <script defer src="renderer.js"></script>
@@ -23,10 +23,11 @@
   </defs></svg>
   <main id="app">
     <section id="setup" class="setup surface" hidden>
-      <header class="window-bar"><span>DEEPSEEK FAST <span class="version">0.01</span></span><button class="icon" data-action="hide" title="隐藏窗口"><svg><use href="#i-close"/></svg></button></header>
+      <header class="window-bar"><span>DEEPSEEK MINI <span class="version">0.02</span></span><button class="icon" data-action="hide" title="隐藏窗口"><svg><use href="#i-close"/></svg></button></header>
       <div class="welcome"><div class="brand brand-large">d<span>·</span></div><h1 id="setup-title">让灵感，随叫随到。</h1><p id="setup-subtitle">一个快捷键，把 DeepSeek 带到你眼前。</p></div>
       <div class="setup-step"><span class="step-number">1</span><div class="step-body"><div class="step-title">连接你的 DeepSeek <span id="login-badge" class="badge">等待登录</span></div><p>在官方网页完成登录，账号会留在这台 Mac。</p></div><button id="login" class="secondary">打开官网 <svg><use href="#i-external"/></svg></button></div>
       <div class="setup-step shortcut-step"><span class="step-number">2</span><div class="step-body"><div class="step-title">选一个唤起快捷键</div><p>再次按下即可隐藏，随时继续上一段对话。</p><div class="shortcut-options"><button class="key-choice selected" data-shortcut="Command+Space"><kbd>⌘</kbd><kbd>Space</kbd><span>默认</span></button><button class="key-choice" data-shortcut="Alt+Space"><kbd>⌥</kbd><kbd>Space</kbd></button><button id="record" class="key-choice">自定义…</button></div><p id="shortcut-hint" class="hint">⌘ Space 通常用于 Spotlight。若被占用，请更换或 <button id="spotlight" class="text-button">调整系统快捷键 ↗</button></p></div></div>
+      <div class="font-setting"><label for="font-size">显示字号 <output id="font-value">14 px</output></label><input id="font-size" type="range" min="12" max="24" step="1" value="14"><p id="font-preview">把问题写下来，让想法更清晰。</p></div>
       <label id="autostart-row" class="checkbox-row"><input id="autostart" type="checkbox">登录 Mac 时在后台启动</label>
       <p id="setup-error" class="error" role="alert" hidden></p>
       <button id="finish" class="primary">完成设置，开始使用 <span>→</span></button>
@@ -34,8 +35,8 @@
     </section>
 
     <section id="chat" hidden>
-      <div class="composer surface">
-        <div class="composer-top"><div class="brand" aria-label="deepseek-fast">d<span>·</span></div><textarea id="question" rows="1" placeholder="有什么想问的？" aria-label="输入问题"></textarea><div class="window-controls"><button class="icon" data-action="settings" title="设置"><svg><use href="#i-settings"/></svg></button><button class="icon" data-action="hide" title="隐藏 · Esc"><svg><use href="#i-close"/></svg></button></div></div>
+      <div class="composer surface"><div class="drag-handle" title="拖动小窗"><span></span></div>
+        <div class="composer-top"><div class="brand" aria-label="deepseek-mini">d<span>·</span></div><textarea id="question" rows="1" placeholder="有什么想问的？" aria-label="输入问题"></textarea><div class="window-controls"><button class="icon" data-action="settings" title="设置"><svg><use href="#i-settings"/></svg></button><button class="icon" data-action="hide" title="隐藏 · Esc"><svg><use href="#i-close"/></svg></button></div></div>
         <div id="files" class="files" hidden></div>
         <div class="composer-bottom"><div class="tools"><button id="attach" class="attach" title="添加文件"><svg><use href="#i-plus"/></svg></button><span class="divider"></span><button id="think" class="mode" aria-pressed="false"><svg><use href="#i-think"/></svg>深度思考</button><button id="search" class="mode" aria-pressed="false"><svg><use href="#i-globe"/></svg>联网搜索</button></div><div class="send-group"><span id="shortcut-label" class="shortcut-label">⌘ Space</span><button id="send" class="send" title="发送 · Enter" disabled><svg><use href="#i-arrow"/></svg></button></div></div>
       </div>
@@ -49,5 +50,6 @@
     </section>
     <div id="toast" class="toast" role="alert" hidden></div>
   </main>
+  <div class="resize-edge n" data-edge="n"></div><div class="resize-edge s" data-edge="s"></div><div class="resize-edge e" data-edge="e"></div><div class="resize-edge w" data-edge="w"></div><div class="resize-edge ne" data-edge="ne"></div><div class="resize-edge nw" data-edge="nw"></div><div class="resize-edge se" data-edge="se"></div><div class="resize-edge sw" data-edge="sw"></div>
 </body>
 </html>

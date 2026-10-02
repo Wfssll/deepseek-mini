@@ -14,13 +14,13 @@ async function build() {
   }
   const icon = path.join(root, '.runtime', 'AppIcon.icns');
   execFileSync('iconutil', ['-c', 'icns', iconset, '-o', icon]);
-  const output = await packager({ dir: root, name: 'deepseek-fast', platform: 'darwin', arch: process.arch,
+  const output = await packager({ dir: root, name: 'deepseek-mini', platform: 'darwin', arch: process.arch,
     out: path.join(root, 'dist'), overwrite: true, asar: true, prune: true, icon,
     appBundleId: 'io.deepseekmini.app', appCategoryType: 'public.app-category.productivity',
     appVersion: require('../package.json').version,
-    extendInfo: { LSUIElement: true, CFBundleGetInfoString: 'deepseek-fast 0.01', NSHumanReadableCopyright: 'MIT · deepseek-fast contributors' },
+    extendInfo: { LSUIElement: true, CFBundleGetInfoString: `deepseek-mini ${require('../package.json').displayVersion}`, NSHumanReadableCopyright: 'MIT · deepseek-mini contributors' },
     ignore: [/^\/\.runtime($|\/)/, /^\/test($|\/)/, /^\/test-output($|\/)/, /^\/scripts($|\/)/, /^\/\.git($|\/)/, /^\/\.github($|\/)/, /^\/docs($|\/)/, /^\/dist($|\/)/]
   });
-  console.log(`Built: ${output[0]}/deepseek-fast.app`);
+  console.log(`Built: ${output[0]}/deepseek-mini.app`);
 }
 build().catch(error => { console.error(error); process.exitCode = 1; });

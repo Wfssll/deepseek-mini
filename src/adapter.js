@@ -41,9 +41,32 @@ function websiteOperation(operation, argument) {
   };
   if (operation === 'snapshot') return snapshot();
   const input = editor();
+  if (operation === 'accepted') return !!input && !(input.value ?? input.textContent).trim();
   if (!input) throw new Error('DeepSeek 输入框尚未就绪，请打开官网完成登录，或检查网络。');
-  if (operation === 'accepted') return (input.value ?? input.textContent).trim() !== argument.trim();
   if (operation === 'focus') { input.focus(); return true; }
+  if (operation === 'submit') {
+    // React's own button handler works even when the website window is hidden.
+    // Never retry a click: delayed website acknowledgement must not send twice.
+    let scope = input.parentElement;
+    while (scope && scope !== document.body && !scope.querySelector('.ds-toggle-button, [aria-pressed]')) scope = scope.parentElement;
+    if (!scope || scope === document.body) scope = input.closest('form') || input.parentElement;
+    const candidates = [...scope.querySelectorAll('button, [role="button"], .ds-icon-button')].filter(visible);
+    let target = candidates.find(el => /^(发送|发送消息|Send|Send message)(\s|$)/i.test(label(el)));
+    if (!target) {
+      // Current official composer uses an unlabelled icon at the lower right.
+      // Limit the fallback to the composer and its right-hand icon controls.
+      const box = input.getBoundingClientRect();
+      const icons = candidates.filter(el => !label(el) && el.querySelector('svg') &&
+        el.getBoundingClientRect().left >= box.left + box.width / 2 &&
+        el.getBoundingClientRect().top >= box.top);
+      target = icons.at(-1);
+    }
+    if (!target) throw new Error('暂未找到官网发送按钮，请打开官网查看。问题已保留。');
+    if (target.disabled || target.getAttribute('aria-disabled') === 'true' || /--disabled/.test(target.className)) {
+      throw new Error('官网发送按钮暂不可用，请等待文件解析完成，或在官网查看提示。问题已保留。');
+    }
+    target.click(); return true;
+  }
   if (operation === 'fill') {
     if (typeof argument !== 'string' || !argument.trim()) throw new Error('请输入问题。');
     if (snapshot().generating) throw new Error('请等待当前回答结束，或先停止生成。');

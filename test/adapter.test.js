@@ -52,3 +52,23 @@ test('answer sanitizer removes executable content while preserving formatting', 
   assert.doesNotMatch(safe, /onclick|<script|javascript:/);
   assert.match(safe, /<strong>format<\/strong>/); window.close();
 });
+
+test('submits via the website button without needing a focused window', () => {
+ const window = page('<form>' + composer + '<button type="button" aria-label="发送">Send</button></form>');
+ let clicks=0; window.document.querySelector('[aria-label="发送"]').onclick=()=>{clicks++;window.document.querySelector('textarea').value='';};
+ window.operate('fill','test');window.document.querySelector('textarea').blur();window.operate('submit');
+ assert.equal(clicks,1);assert.equal(window.operate('accepted','test'),true);window.close();
+});
+test('keeps the draft when file processing disables the website send button', () => {
+ const window=page('<form>'+composer+'<button aria-label="发送" disabled>Send</button></form>');
+ window.operate('fill','keep this');assert.throws(()=>window.operate('submit'),/解析/);
+ assert.equal(window.document.querySelector('textarea').value,'keep this');window.close();
+});
+test('only clicks the unlabelled send icon inside the official composer', () => {
+ const window=page('<button id="outside"><svg></svg></button><div>'+composer+'<div role="button" id="upload"><svg></svg></div><div class="ds-icon-button" id="native-send"><svg></svg></div></div>');
+ window.document.querySelector('textarea').getBoundingClientRect=()=>({left:20,top:10,width:400});
+ for(const id of ['outside','upload'])window.document.getElementById(id).getBoundingClientRect=()=>({left:10,top:60});
+ window.document.getElementById('native-send').getBoundingClientRect=()=>({left:420,top:60});
+ let clicked='';for(const id of ['outside','upload','native-send'])window.document.getElementById(id).onclick=()=>{clicked=id;};
+ window.operate('fill','hello');window.operate('submit');assert.equal(clicked,'native-send');window.close();
+});

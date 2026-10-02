@@ -2,7 +2,26 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const HOME_URL = 'https://chat.deepseek.com/';
-const DEFAULTS = { shortcut: 'Command+Space', setupComplete: false, launchAtLogin: false };
+const DEFAULTS = { shortcut: 'Command+Space', setupComplete: false, launchAtLogin: false,
+  fontSize: 14, window: { width: 672, expandedHeight: 600, x: null, y: null } };
+
+function normalizeAppearance(saved = {}) {
+  const geometry = saved.window || {};
+  const integer = (value, min, max, fallback) => Number.isFinite(value) ? Math.round(Math.max(min, Math.min(max, value))) : fallback;
+  return { fontSize: integer(saved.fontSize, 12, 24, 14), window: {
+    width: integer(geometry.width, 460, 1800, 672), expandedHeight: integer(geometry.expandedHeight, 320, 1600, 600),
+    x: Number.isFinite(geometry.x) ? Math.round(geometry.x) : null,
+    y: Number.isFinite(geometry.y) ? Math.round(geometry.y) : null
+  } };
+}
+
+function fitBounds(bounds, area) {
+  const width = Math.min(bounds.width, area.width);
+  const height = Math.min(bounds.height, area.height);
+  return { width, height,
+    x: Math.round(Math.max(area.x, Math.min(bounds.x, area.x + area.width - width))),
+    y: Math.round(Math.max(area.y, Math.min(bounds.y, area.y + area.height - height))) };
+}
 
 function isOfficialURL(value) {
   try { const url = new URL(value); return url.protocol === 'https:' && url.hostname === 'chat.deepseek.com'; }
@@ -25,8 +44,8 @@ function readSettings(directory) {
   try {
     const saved = JSON.parse(fs.readFileSync(path.join(directory, 'settings.json'), 'utf8'));
     return { shortcut: normalizeShortcut(saved.shortcut), setupComplete: saved.setupComplete === true,
-      launchAtLogin: saved.launchAtLogin === true };
-  } catch { return { ...DEFAULTS }; }
+      launchAtLogin: saved.launchAtLogin === true, ...normalizeAppearance(saved) };
+  } catch { return { ...DEFAULTS, ...normalizeAppearance() }; }
 }
 
 function writeSettings(directory, settings) {
@@ -45,4 +64,4 @@ function changeShortcut(api, previous, next, callback) {
   return normalized;
 }
 
-module.exports = { HOME_URL, DEFAULTS, isOfficialURL, normalizeShortcut, readSettings, writeSettings, changeShortcut };
+module.exports = { HOME_URL, DEFAULTS, normalizeAppearance, fitBounds, isOfficialURL, normalizeShortcut, readSettings, writeSettings, changeShortcut };

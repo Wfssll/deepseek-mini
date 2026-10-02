@@ -4,7 +4,8 @@ let shortcut = 'Command+Space';
 let recording = false;
 let lastView = '';
 let lastHTML = '';
-let lastSize = 0;
+let lastSize = '';
+let previewFont = null;
 let toastTimer;
 let submitting = false;
 
@@ -16,8 +17,12 @@ async function call(name, ...args) {
 }
 function fit() {
   requestAnimationFrame(() => {
-    const size = Math.ceil($('app').getBoundingClientRect().height + 3);
-    if (size !== lastSize) { lastSize = size; window.mini.resize(size); }
+    if (!current) return;
+    const height = element => element.hidden ? 0 : Math.ceil(element.getBoundingClientRect().height);
+    const compactHeight = height(document.querySelector('.composer')) + height($('connection')) + height($('demo-label')) + height($('toast')) + 30;
+    const size = { view: current.view, expanded: !$('response').hidden, compactHeight, setupHeight: height($('setup')) + 30 };
+    const key = JSON.stringify(size);
+    if (key !== lastSize) { lastSize = key; window.mini.resize(size); }
   });
 }
 function toast(message) {
@@ -35,6 +40,7 @@ function choose(value) {
 }
 function render(state) {
   current = state;
+  applyFont(previewFont ?? state.settings.fontSize);
   const setup = state.view !== 'chat';
   $('setup').hidden = !setup; $('chat').hidden = setup;
   if (state.view !== lastView) {
@@ -151,6 +157,27 @@ $('finish').addEventListener('click', async () => {
   catch (error) { $('setup-error').textContent = error.message; $('setup-error').hidden = false; fit(); }
   finally { $('finish').disabled = false; }
 });
+function applyFont(size) {
+  const changed = document.documentElement.style.getPropertyValue('--content-font-size') !== size + 'px';
+  document.documentElement.style.setProperty('--content-font-size', size + 'px');
+  $('font-size').value = size; $('font-value').textContent = size + ' px';
+  if (changed) growInput();
+}
+$('font-size').addEventListener('input', () => { previewFont = Number($('font-size').value); applyFont(previewFont); growInput(); });
+$('font-size').addEventListener('change', () => call('appearance', { fontSize: Number($('font-size').value) }).then(() => { previewFont = null; }).catch(error => { previewFont = null; applyFont(current.settings.fontSize); toast(error.message); }));
+for (const handle of document.querySelectorAll('[data-edge]')) {
+  let origin;
+  handle.addEventListener('pointerdown', event => {
+    origin = { x: event.screenX, y: event.screenY }; handle.setPointerCapture(event.pointerId);
+    window.mini.resizeDrag({ phase: 'start', edge: handle.dataset.edge }); event.preventDefault();
+  });
+  handle.addEventListener('pointermove', event => {
+    if (origin) window.mini.resizeDrag({ dx: event.screenX - origin.x, dy: event.screenY - origin.y });
+  });
+  const end = () => { origin = null; window.mini.resizeDrag({ phase: 'end' }); };
+  handle.addEventListener('pointerup', end); handle.addEventListener('pointercancel', end);
+}
+window.addEventListener('resize', fit);
 window.addEventListener('focus', () => { if (current?.view === 'chat') $('question').focus(); });
 window.mini.onState(render);
 call('state').then(render).catch(error => toast(error.message));
