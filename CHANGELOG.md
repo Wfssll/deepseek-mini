@@ -1,8 +1,19 @@
 # Changelog
 
+## 0.04 — 2026-10-03
+
+- Use **deepseek-mini** consistently in the app, documentation, license, source folder, and downloads.
+- Remove the standalone paste-image button. Paste images directly into the composer with Command-V; ordinary text paste remains unchanged.
+- Add a × removal control for pending images and files. Confirm removal in the official composer before updating the mini window, preserving the draft and remaining attachments.
+- Preserve each question and reply in the current conversation. Streaming updates the latest turn without clearing earlier turns or disturbing the scroll position when reading older messages.
+- Retain font controls, remembered geometry, official sign-in, menu-bar access, and explicit help/quit controls.
+- Add a local preview command that reuses the installed app’s existing sign-in and settings.
+
+Validation: 23 automated tests, syntax checks, and Electron desktop regressions for PNG image paste, attachment removal, excluded deleted files, draft retention, two-turn history, scrolling, resize, font settings, and quit. Live testing on the development Mac confirmed official-page image removal and multiple synchronized replies with the existing account. Apple Silicon build; signing and notarization remain unavailable.
+
 ## 0.03 — 2026-10-03
 
-- Paste screenshots and images into the mini composer with Command-V, or use the explicit paste-image button.
+- Paste screenshots and images into the mini composer with Command-V.
 - Upload pasted images through the official file input, show thumbnails, preserve question text, and avoid intercepting plain-text paste.
 - Use Electron’s current asynchronous ClipboardItem API for native clipboard images and text copying.
 - Guard uploads while submitting or generating; clean temporary pasted-image files on app exit.
@@ -30,7 +41,7 @@ Validation: 17 automated tests and the Electron offline desktop suite. Live acco
 
 ## 0.01 — 2026-10-02
 
-First public release of **deepseek-fast**, a keyboard-first macOS mini window for the official DeepSeek website.
+First public release of **deepseek-mini**, a keyboard-first macOS mini window for the official DeepSeek website.
 
 - A compact composer with an expandable answer card.
 - Global show/hide shortcut, first-run shortcut setup, and conflict reporting.

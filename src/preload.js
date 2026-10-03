@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('mini', {
   back: () => invoke('back'),
   quit: () => invoke('quit'),
   pasteImage: value => invoke('paste-image', value),
+  removeAttachment: name => invoke('remove-attachment', name),
   resize: value => invoke('resize', value),
   resizeDrag: value => invoke('resize-drag', value),
   appearance: value => invoke('appearance', value),

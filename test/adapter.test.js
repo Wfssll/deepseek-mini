@@ -72,3 +72,23 @@ test('only clicks the unlabelled send icon inside the official composer', () => 
  let clicked='';for(const id of ['outside','upload','native-send'])window.document.getElementById(id).onclick=()=>{clicked=id;};
  window.operate('fill','hello');window.operate('submit');assert.equal(clicked,'native-send');window.close();
 });
+
+test('removes only the named pending attachment, preserving other files and draft', () => {
+  const window = page('<div>'+composer+'<div><span>a.png</span><button aria-label="删除附件" id="a">×</button></div><div><span>b.png</span><button aria-label="删除附件" id="b">×</button></div></div>');
+  window.document.querySelector('textarea').value='keep draft';
+  window.document.getElementById('a').onclick=function(){this.parentElement.remove();};
+  window.operate('remove-attachment','a.png');
+  assert.equal(window.operate('attachment-present','a.png'),false);
+  assert.equal(window.operate('attachment-present','b.png'),true);
+  assert.equal(window.document.querySelector('textarea').value,'keep draft'); window.close();
+});
+test('recognizes the official image close control in a sibling attachment row', () => {
+  const window=page('<div><div><div role="button"><img alt="test.png"><div class="c8b3f8a6" tabindex="0"><svg></svg></div></div></div><div>'+composer+'</div></div>');
+  let clicks=0; window.document.querySelector('.c8b3f8a6').onclick=function(){clicks++;this.parentElement.remove();};
+  window.operate('remove-attachment','test.png');
+  assert.equal(clicks,1);assert.equal(window.operate('attachment-present','test.png'),false);window.close();
+});
+test('never deletes attachments in previously sent messages', () => {
+  const window=page('<main><section><span>old.png</span><button aria-label="删除附件">×</button></section><form>'+composer+'</form></main>');
+  assert.throws(()=>window.operate('remove-attachment','old.png'),/未找到/);window.close();
+});

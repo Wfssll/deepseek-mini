@@ -23,7 +23,7 @@
   </defs></svg>
   <main id="app">
     <section id="setup" class="setup surface" hidden>
-      <header class="window-bar"><span>DEEPSEEK MINI <span class="version">0.03</span></span><button class="icon" data-action="hide" title="隐藏窗口"><svg><use href="#i-close"/></svg></button></header>
+      <header class="window-bar"><span>DEEPSEEK MINI <span class="version">0.04</span></span><button class="icon" data-action="hide" title="隐藏窗口"><svg><use href="#i-close"/></svg></button></header>
       <div class="welcome"><div class="brand brand-large">d<span>·</span></div><h1 id="setup-title">让灵感，随叫随到。</h1><p id="setup-subtitle">一个快捷键，把 DeepSeek 带到你眼前。</p></div>
       <div class="setup-step"><span class="step-number">1</span><div class="step-body"><div class="step-title">连接你的 DeepSeek <span id="login-badge" class="badge">等待登录</span></div><p>在官方网页完成登录，账号会留在这台 Mac。</p></div><button id="login" class="secondary">打开官网 <svg><use href="#i-external"/></svg></button></div>
       <div class="setup-step shortcut-step"><span class="step-number">2</span><div class="step-body"><div class="step-title">选一个唤起快捷键</div><p>再次按下即可隐藏，随时继续上一段对话。</p><div class="shortcut-options"><button class="key-choice selected" data-shortcut="Command+Space"><kbd>⌘</kbd><kbd>Space</kbd><span>默认</span></button><button class="key-choice" data-shortcut="Alt+Space"><kbd>⌥</kbd><kbd>Space</kbd></button><button id="record" class="key-choice">自定义…</button></div><p id="shortcut-hint" class="hint">⌘ Space 通常用于 Spotlight。若被占用，请更换或 <button id="spotlight" class="text-button">调整系统快捷键 ↗</button></p></div></div>
@@ -40,7 +40,7 @@
       <div class="guide-body"><h1>打开、收起，或真正退出。</h1>
         <h2>启动应用</h2><p>把 deepseek-mini.app 拖入 Finder 的「应用程序」，双击它即可启动。退出后需要再次双击启动，快捷键才会生效。可在设置里开启「登录 Mac 时在后台启动」。</p>
         <h2>显示与隐藏</h2><p>当前快捷键：<strong id="guide-shortcut">⌘ Space</strong>。再次按下、按 Esc，或点击小窗的 × 都只是隐藏，对话留在后台。也可以从顶部菜单栏的 <strong>DS</strong> 菜单打开小窗。</p>
-        <h2>粘贴图片，让 DeepSeek 分析</h2><p>复制截图或图片内容后，在输入框按 <strong>⌘ V</strong>，也可以点击「粘贴图片」。看到图片缩略图后，等官网解析完成，输入你想问的问题并发送。普通文字粘贴不受影响。</p>
+        <h2>粘贴图片，让 DeepSeek 分析</h2><p>复制截图或图片内容后，在输入框按 <strong>⌘ V</strong>。看到图片缩略图后，等官网解析完成，输入你想问的问题并发送。点击附件右上角的 × 可以取消该附件。普通文字粘贴不受影响。</p>
         <h2>关闭应用</h2><p>点击下面的「退出应用」，或菜单栏 DS →「退出 deepseek-mini」。退出会停止后台运行并释放快捷键，登录与设置仍保留。</p>
         <details><summary>终端启动与退出方式</summary><p>安装到「应用程序」后，在终端执行：</p><code>open -a deepseek-mini</code><p>找不到退出入口时，关闭该应用的主进程：</p><code>pkill -TERM -x deepseek-mini</code><p>从源码运行：在项目目录执行 <code>npm start</code>，按 Control + C 结束。</p></details>
         <div class="guide-actions"><button class="secondary" data-action="back">返回小窗</button><button class="quit-button" data-action="quit">退出应用</button></div>
@@ -50,12 +50,12 @@
       <div class="composer surface"><div class="drag-handle" title="拖动小窗"><span></span></div>
         <div class="composer-top"><div class="brand" aria-label="deepseek-mini">d<span>·</span></div><textarea id="question" rows="1" placeholder="有什么想问的？" aria-label="输入问题"></textarea><div class="window-controls"><button class="icon" data-action="newChat" title="新对话 · 清空当前附件"><svg><use href="#i-new"/></svg></button><button class="icon help-button" data-action="help" title="使用说明 / 退出应用">?</button><button class="icon" data-action="settings" title="设置"><svg><use href="#i-settings"/></svg></button><button class="icon" data-action="hide" title="隐藏 · Esc"><svg><use href="#i-close"/></svg></button></div></div>
         <div id="files" class="files" hidden></div><div id="images" class="image-previews" hidden></div>
-        <div class="composer-bottom"><div class="tools"><button id="attach" class="attach" title="添加文件"><svg><use href="#i-plus"/></svg></button><span class="divider"></span><button id="think" class="mode" aria-pressed="false"><svg><use href="#i-think"/></svg>深度思考</button><button id="search" class="mode" aria-pressed="false"><svg><use href="#i-globe"/></svg>联网搜索</button></div><div class="send-group"><button id="paste-image" class="text-button paste-button" title="粘贴剪贴板图片 · ⌘ V">粘贴图片</button><span id="shortcut-label" class="shortcut-label">⌘ Space</span><button id="send" class="send" title="发送 · Enter" disabled><svg><use href="#i-arrow"/></svg></button></div></div>
+        <div class="composer-bottom"><div class="tools"><button id="attach" class="attach" title="添加文件"><svg><use href="#i-plus"/></svg></button><span class="divider"></span><button id="think" class="mode" aria-pressed="false"><svg><use href="#i-think"/></svg>深度思考</button><button id="search" class="mode" aria-pressed="false"><svg><use href="#i-globe"/></svg>联网搜索</button></div><div class="send-group"><span id="shortcut-label" class="shortcut-label">⌘ Space</span><button id="send" class="send" title="发送 · Enter" disabled><svg><use href="#i-arrow"/></svg></button></div></div>
       </div>
       <div id="connection" class="connection" hidden><span id="connection-text"></span><button id="connect-action" class="text-button">打开官网 ↗</button></div>
       <section id="response" class="response surface" hidden>
         <header class="response-header"><span class="response-title"><span class="status-dot"></span>DeepSeek</span><div class="response-tools"><button id="new-chat" class="icon" title="新对话"><svg><use href="#i-new"/></svg></button><button id="copy" class="icon" title="复制回答"><svg><use href="#i-copy"/></svg></button><button id="full" class="icon" title="在完整官网中查看"><svg><use href="#i-external"/></svg></button></div></header>
-        <div class="response-scroll"><p id="prompt" class="prompt"></p><div id="waiting" class="waiting"><span class="thinking-dots"><i></i><i></i><i></i></span><span>正在等待 DeepSeek 网页回复</span></div><article id="answer" class="answer"></article></div>
+        <div class="response-scroll"><div id="conversation"></div><p id="prompt" class="prompt" hidden></p><div id="waiting" class="waiting"><span class="thinking-dots"><i></i><i></i><i></i></span><span>正在等待 DeepSeek 网页回复</span></div><article id="answer" class="answer"></article></div>
         <footer class="response-footer"><span id="answer-status">回答与官网同步</span><button id="stop" class="text-button" hidden>停止生成</button><span>Shift + Enter 换行</span></footer>
       </section>
       <div id="demo-label" class="demo-label" hidden>离线演示 · 此模式不会连接 DeepSeek 或产生真实 AI 回答</div>

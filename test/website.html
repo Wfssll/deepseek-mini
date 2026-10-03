@@ -1,21 +1,28 @@
 <!doctype html><html lang="zh"><meta charset="UTF-8"><title>deepseek-mini · Offline fixture</title>
 <style>body{font:16px system-ui;margin:60px;max-width:700px}textarea{width:100%;height:80px}button{padding:10px;margin:8px 5px 8px 0}.ds-markdown{line-height:1.9}[aria-pressed=true]{color:rgb(77,107,254)}#stop[hidden]{display:none}</style>
 <h1>离线演示网页</h1><p>仅用于界面和交互测试，不会连接 DeepSeek，不是真实 AI 回答。</p>
-<form onsubmit="return false"><textarea id="chat-input" placeholder="给 DeepSeek 发送消息"></textarea><br>
+<form onsubmit="return false"><div id="pending"></div><textarea id="chat-input" placeholder="给 DeepSeek 发送消息"></textarea><br>
 <button id="think" aria-pressed="false">深度思考</button><button id="search" aria-pressed="false">联网搜索</button>
 <button id="send" aria-label="发送">发送</button></form><input type="file" multiple aria-label="Upload file"><button id="stop" aria-label="停止生成" hidden>停止生成</button><div id="answers"></div>
 <script>
 for(const id of ['think','search'])document.getElementById(id).onclick=function(){this.setAttribute('aria-pressed',String(this.getAttribute('aria-pressed')!=='true'))};
 let timer;const stop=document.getElementById('stop');stop.onclick=()=>{clearInterval(timer);stop.hidden=true};
-window.uploadedFiles=[];
+window.uploadedFiles=[]; window.pendingFiles=[]; window.sentFiles=[];
 document.querySelector('input[type=file]').onchange=async event=>{
-  for (const file of event.target.files) window.uploadedFiles.push({name:file.name,size:file.size,type:file.type,signature:Array.from(new Uint8Array(await file.arrayBuffer()).slice(0,8))});
+  for (const file of event.target.files) {
+    window.uploadedFiles.push({name:file.name,size:file.size,type:file.type,signature:Array.from(new Uint8Array(await file.arrayBuffer()).slice(0,8))});
+    window.pendingFiles.push(file.name);
+    const card=document.createElement('div'); const name=document.createElement('span'); name.textContent=file.name;
+    const remove=document.createElement('button'); remove.type='button';remove.setAttribute('aria-label','删除附件');remove.textContent='×';
+    remove.onclick=()=>{window.pendingFiles.splice(window.pendingFiles.indexOf(file.name),1);card.remove();};
+    card.append(name,remove); document.getElementById('pending').append(card);
+  }
 };
 window.sendCount=0;
 document.getElementById('send').onclick=()=>{
 const input=document.getElementById('chat-input');if(!input.value.trim()||!stop.hidden)return;
 window.sendCount++;document.getElementById('send').disabled=true;
-setTimeout(()=>{input.value='';document.getElementById('send').disabled=false;
+setTimeout(()=>{window.sentFiles.push([...window.pendingFiles]);window.pendingFiles=[];document.getElementById('pending').replaceChildren();input.value='';document.getElementById('send').disabled=false;
 const answer=document.createElement('div');answer.className='ds-markdown';document.getElementById('answers').append(answer);stop.hidden=false;
 const blocks=['<p>这是一段<strong>离线演示回复</strong>，帮助你预览小窗的使用体验。</p>','<h3>随时唤起，随时收起</h3><p>用你设置的<strong>快捷键</strong>打开 deepseek-mini。在输入条写下问题，按 Enter 发送，回答会出现在这里。</p>','<ul><li><strong>深度思考</strong>：需要多想一步时，点击开启。</li><li><strong>联网搜索</strong>：需要更新的信息时，交给网页搜索。</li><li><strong>添加文件</strong>：点左侧加号，选择需要阅读的文档。</li></ul>','<blockquote>按 Esc 或再次按快捷键隐藏小窗，对话会保留在后台。</blockquote>'];
 let index=0;timer=setInterval(()=>{answer.innerHTML+=blocks[index++];if(index===blocks.length){clearInterval(timer);stop.hidden=true}},450);

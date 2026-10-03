@@ -24,6 +24,27 @@ function websiteOperation(operation, argument) {
     if (/rgb\((\d+), \1, \1\)/.test(color)) return false;
     return null;
   };
+  const attachmentCard = name => {
+    const input = editor();
+    let scope = input?.parentElement;
+    while (scope && scope !== document.body && !scope.querySelector('.ds-toggle-button, [aria-pressed]')) scope = scope.parentElement;
+    scope = scope && scope !== document.body ? scope : input?.closest('form');
+    if (!scope) return null;
+    // Official attachment row is a sibling of the textarea/mode container.
+    if (scope.tagName !== 'FORM' && scope.parentElement && scope.parentElement !== document.body) scope = scope.parentElement;
+    const matches = [...scope.querySelectorAll('*')].filter(el => visible(el) &&
+      (el.textContent.trim() === name || el.getAttribute('title') === name || el.getAttribute('alt') === name));
+    for (const match of matches.reverse()) {
+      for (let card = match; card && card !== scope; card = card.parentElement) {
+        const buttons = [...card.querySelectorAll('button, [role="button"], .ds-icon-button')];
+        const remove = card.querySelector('.c8b3f8a6[tabindex="0"]') ||
+          buttons.find(el => /删除|移除|取消|Remove|Delete|Cancel|Close|关闭/i.test(label(el))) ||
+          buttons.find(el => !label(el) && el.querySelector('svg') && !el.className.includes('disabled'));
+        if (remove) return { card, remove };
+      }
+    }
+    return null;
+  };
   const snapshot = () => {
     const input = editor();
     const text = document.body?.innerText || document.body?.textContent || '';
@@ -40,9 +61,15 @@ function websiteOperation(operation, argument) {
       errors: [...document.querySelectorAll('[role="alert"], .ds-toast')].filter(visible).map(el => el.textContent.trim()).join(' ').slice(0, 500) };
   };
   if (operation === 'snapshot') return snapshot();
+  if (operation === 'attachment-present') return !!attachmentCard(argument);
   const input = editor();
   if (operation === 'accepted') return !!input && !(input.value ?? input.textContent).trim();
   if (!input) throw new Error('DeepSeek 输入框尚未就绪，请打开官网完成登录，或检查网络。');
+  if (operation === 'remove-attachment') {
+    const target = attachmentCard(argument);
+    if (!target) throw new Error('未找到官网的附件删除按钮，请打开官网查看。');
+    target.remove.click(); return true;
+  }
   if (operation === 'focus') { input.focus(); return true; }
   if (operation === 'submit') {
     // React's own button handler works even when the website window is hidden.

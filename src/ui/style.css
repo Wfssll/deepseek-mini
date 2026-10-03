@@ -36,7 +36,7 @@ html, body { height: 100%; }
 .image-previews { display: flex; gap: 8px; padding: 10px 0 0 48px; flex-wrap: wrap; }
 .image-previews img { width: 64px; height: 56px; object-fit: contain; border-radius: 7px; border: 1px solid var(--line); background: #f7f8fb; }
 .help-button { border: 1px solid #e8eaf1; border-radius: 50%; width: 23px; height: 23px; margin: 3px 3px 0 0; font-size: 13px; }
-.paste-button { white-space: nowrap; }
+
 .connection { background: #fff; border: 1px solid #e6e7ee; border-radius: 10px; padding: 9px 12px; margin-top: 8px; }
 .send-group { gap: 10px; }
 .setup-actions { display: flex; justify-content: space-between; align-items: center; margin: 16px 30px 0; }
@@ -52,4 +52,13 @@ html, body { height: 100%; }
 .guide details p { margin: 9px 0; }
 .guide summary { cursor: pointer; }
 .guide-actions { display: flex; justify-content: space-between; margin-top: 22px; }
-@media (max-width: 550px) { .send-group { gap: 7px; } .paste-button { font-size: 10px; } .tools { gap: 2px; } .mode { padding: 6px 4px; } .divider { margin: 0 3px; } }
+@media (max-width: 550px) { .send-group { gap: 7px; }  .tools { gap: 2px; } .mode { padding: 6px 4px; } .divider { margin: 0 3px; } }
+
+.attachment-preview { position: relative; display: inline-flex; }
+.attachment-remove { border: 1px solid #dce0eb; border-radius: 50%; background: white; color: #70788b; width: 20px; height: 20px; padding: 0; font-size: 16px; line-height: 17px; }
+.attachment-preview .attachment-remove { position: absolute; right: -6px; top: -6px; }
+.file-chip { display: inline-flex; align-items: center; gap: 6px; }
+.file-chip > span { overflow: hidden; text-overflow: ellipsis; }
+.file-chip .attachment-remove { flex-shrink: 0; }
+.conversation-turn + .conversation-turn { border-top: 1px solid var(--line); margin-top: 26px; padding-top: 22px; }
+.turn-files { color: #8a91a2; font-size: 11px; overflow-wrap: anywhere; }

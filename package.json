@@ -1,17 +1,23 @@
 {
   "name": "deepseek-mini",
   "productName": "deepseek-mini",
-  "version": "0.0.3",
-  "displayVersion": "0.03",
+  "version": "0.0.4",
+  "displayVersion": "0.04",
   "description": "Bring DeepSeek to your fingertips: a global-hotkey macOS mini window with DeepThink, web search, and file attachments. No API key required.",
   "main": "src/main.js",
   "private": true,
-  "repository": { "type": "git", "url": "https://github.com/Wfssll/deepseek-mini.git" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Wfssll/deepseek-mini.git"
+  },
   "homepage": "https://github.com/Wfssll/deepseek-mini#readme",
-  "bugs": { "url": "https://github.com/Wfssll/deepseek-mini/issues" },
+  "bugs": {
+    "url": "https://github.com/Wfssll/deepseek-mini/issues"
+  },
   "license": "MIT",
   "scripts": {
     "start": "electron .",
+    "preview": "electron . --preview",
     "demo": "electron . --demo",
     "test": "node --test test/*.test.js",
     "check": "node scripts/check.js",

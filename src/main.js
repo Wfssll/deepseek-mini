@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, nativeImage, screen, shell, dialog, clipboard, ClipboardItem } = require('electron');
+const { app, BrowserWindow, Tray, Menu, globalShortcut, ipcMain, nativeImage, screen, shell, dialog, clipboard } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -8,11 +8,12 @@ const { clipboardImageBytes } = require('./images');
 
 const demo = process.argv.includes('--demo');
 const smoke = process.argv.includes('--smoke-test');
+const preview = process.argv.includes('--preview');
 const fixture = demo || smoke;
 app.setName('deepseek-mini');
 // Preserve the original prototype's browser session and settings on upgrade.
-if (app.isPackaged && process.platform === 'darwin') app.setPath('userData', path.join(app.getPath('appData'), 'DeepSeek Mini'));
-if (!app.isPackaged) app.setPath('userData', path.join(__dirname, '..', '.runtime', fixture ? 'demo-profile' : 'profile'));
+if ((app.isPackaged || preview) && process.platform === 'darwin') app.setPath('userData', path.join(app.getPath('appData'), 'DeepSeek Mini'));
+if (!app.isPackaged && !preview) app.setPath('userData', path.join(__dirname, '..', '.runtime', fixture ? 'demo-profile' : 'profile'));
 if (smoke) app.setPath('userData', path.join(__dirname, '..', '.runtime', `smoke-${process.pid}`));
 const acquired = app.requestSingleInstanceLock({ demo: fixture });
 if (!acquired) app.quit();
@@ -30,6 +31,7 @@ let view = 'setup';
 let websiteState = { status: 'loading', hasComposer: false, think: null, search: null, generating: false };
 let answerHTML = '';
 let prompt = '';
+let conversation = [];
 let attachments = [];
 let pastedImages = [];
 let uploading = false;
@@ -40,7 +42,7 @@ const homeURL = fixture ? pathToFileURL(path.join(__dirname, '..', 'test', 'webs
 
 function state() {
   return { settings, shortcutRegistered: !!registered, view, demo: fixture, website: websiteState,
-    answerHTML, prompt, attachments, pastedImages, uploading, awaiting: !!awaiting, notice };
+    answerHTML, prompt, conversation, attachments, pastedImages, uploading, awaiting: !!awaiting, notice };
 }
 
 function publish() {
@@ -64,7 +66,9 @@ async function remote(operation, argument) {
   if (!website || website.isDestroyed()) throw new Error('官网窗口不可用，请重启应用。');
   const url = website.webContents.getURL();
   if (!isOfficialURL(url) && !(fixture && url === homeURL)) throw new Error('请等待 DeepSeek 官方网页加载完成。');
-  return website.webContents.executeJavaScript(`(${websiteOperation.toString()})(${JSON.stringify(operation)},${JSON.stringify(argument ?? null)})`, true);
+  const result = await website.webContents.executeJavaScript(`(() => { try { return (${websiteOperation.toString()})(${JSON.stringify(operation)},${JSON.stringify(argument ?? null)}); } catch (error) { return { __miniError: error.message }; } })()`, true);
+  if (result?.__miniError) throw new Error(result.__miniError);
+  return result;
 }
 
 async function poll() {
@@ -79,7 +83,8 @@ async function poll() {
       attachments = [];
       pastedImages = [];
       notice = '';
-    } else if (!awaiting && answerHTML && next.html) answerHTML = next.html;
+    } else if (!sending && !awaiting && answerHTML && next.html) answerHTML = next.html;
+    if (conversation.length && !sending && !awaiting) conversation.at(-1).html = answerHTML;
     if (awaiting && Date.now() - awaiting.started > 45000) notice = '官网还未返回回答。可打开完整官网查看进度或错误提示。';
     if (next.errors) notice = next.errors;
     publish();
@@ -169,7 +174,7 @@ function updateTray() {
 
 async function newChat() {
   if (websiteState.generating || awaiting || sending || uploading) throw new Error('请先等待上传完成或停止当前回答，再创建新对话。');
-  answerHTML = ''; prompt = ''; attachments = []; pastedImages = []; notice = '';
+  answerHTML = ''; prompt = ''; conversation = []; attachments = []; pastedImages = []; notice = '';
   websiteState = { status: 'loading', hasComposer: false, think: null, search: null };
   publish();
   await website.loadURL(homeURL);
@@ -227,7 +232,9 @@ async function pasteImage(value) {
   } catch (error) {
     if (file) fs.rmSync(file, { force: true });
     throw error;
-  } finally { uploading = false; publish(); }
+  } finally {
+    uploading = false; publish();
+  }
 }
 
 function configureHandlers() {
@@ -239,6 +246,23 @@ function configureHandlers() {
   handle('back', () => { view = settings.setupComplete ? 'chat' : 'setup'; publish(); });
   handle('quit', () => { setImmediate(() => app.quit()); return true; });
   handle('paste-image', pasteImage);
+  handle('remove-attachment', async name => {
+    if (typeof name !== 'string' || !attachments.includes(name)) throw new Error('附件已移除。');
+    if (uploading || sending || awaiting || websiteState.generating) throw new Error('请等待上传或回答完成，再删除附件。');
+    uploading = true; publish();
+    try {
+      await remote('remove-attachment', name);
+      const deadline = Date.now() + 5000;
+      while (await remote('attachment-present', name)) {
+        if (Date.now() >= deadline) throw new Error('官网尚未确认删除，请打开官网检查附件。');
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      attachments.splice(attachments.indexOf(name), 1);
+      pastedImages = pastedImages.filter(image => image.name !== name);
+      if (imageDirectory && name.startsWith('粘贴图片-')) fs.rmSync(path.join(imageDirectory, path.basename(name)), { force: true });
+      notice = ''; return true;
+    } finally { uploading = false; publish(); }
+  });
   handle('resize', resize);
   handle('resize-drag', resizeDrag);
   handle('appearance', value => {
@@ -283,6 +307,8 @@ function configureHandlers() {
       }
       if (!accepted) throw new Error('官网尚未确认接收。问题已保留；请打开官网查看文件解析或网络状态，再决定是否发送。');
       prompt = text; answerHTML = ''; notice = '';
+      conversation.push({ id: Date.now(), prompt: text, html: '', files: [...attachments], images: [...pastedImages] });
+      attachments = []; pastedImages = [];
       awaiting = { ...baseline, started: Date.now() };
       publish();
       return true;
@@ -387,15 +413,15 @@ async function smokeTest() {
   if (files.length !== 1 || files[0].type !== 'image/png' || files[0].signature.join(',') !== '137,80,78,71,13,10,26,10') throw new Error('Image was not uploaded as a PNG');
   if (await invoke("document.getElementById('question').value") !== 'keep my text') throw new Error('Image paste changed the question');
   if (await invoke("document.querySelectorAll('#images img').length") !== 1) throw new Error('Pasted image preview missing');
-  const originalClipboard = await Promise.all((await clipboard.read()).map(async item =>
-    new ClipboardItem(Object.fromEntries(await Promise.all(item.types.map(async type => [type, await item.getType(type)]))))));
-  try {
-    await clipboard.write([new ClipboardItem({ 'image/png': new Blob([testImage], { type: 'image/png' }) })]);
-    const nativePaste = await invoke('window.mini.pasteImage()');
-    if (!nativePaste.ok) throw new Error(nativePaste.error);
-    const uploads = await website.webContents.executeJavaScript('window.uploadedFiles');
-    if (uploads.length !== 2 || !uploads.every(file => file.type === 'image/png')) throw new Error('Native clipboard upload failed');
-  } finally { await clipboard.write(originalClipboard); }
+  const secondPaste = await invoke('window.mini.pasteImage({bytes:new Uint8Array(' + JSON.stringify([...testImage]) + ')})');
+  if (!secondPaste.ok) throw new Error(secondPaste.error);
+  if (await website.webContents.executeJavaScript('window.uploadedFiles.length') !== 2) throw new Error('Second image upload failed');
+  const removedName = attachments[0];
+  const deletion = await invoke('window.mini.removeAttachment(' + JSON.stringify(removedName) + ')');
+  if (!deletion.ok) throw new Error(deletion.error);
+  if (attachments.length !== 1 || pastedImages.length !== 1 || await website.webContents.executeJavaScript('window.pendingFiles.length') !== 1) throw new Error('Attachment deletion did not reach website');
+  if (await invoke("document.getElementById('question').value") !== 'keep my text') throw new Error('Deletion changed draft');
+  if (await invoke("!!document.getElementById('paste-image')")) throw new Error('Explicit paste button remains');
   const invalidImage = await invoke("window.mini.pasteImage({bytes:new Uint8Array([1,2,3])})");
   if (invalidImage.ok || uploading) throw new Error('Invalid images must fail and release upload lock');
   const plainPaste = await invoke(`(() => { const data = new DataTransfer(); data.setData('text/plain','normal text'); return document.getElementById('question').dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true})); })()`);
@@ -416,6 +442,17 @@ async function smokeTest() {
   const invalid = await website.webContents.executeJavaScript("typeof window.mini === 'undefined'");
   if (!invalid) throw new Error('Privileged bridge leaked into the remote page');
   if (await website.webContents.executeJavaScript('window.sendCount') !== 1) throw new Error('Submission was duplicated');
+  const previousHTML = conversation[0].html;
+  const second = await invoke("window.mini.send('第二个问题：再介绍一下快捷键')");
+  if (!second.ok) throw new Error(second.error);
+  if (conversation.length !== 2 || conversation[0].html !== previousHTML) throw new Error('Second send cleared history');
+  await delay(3500); await poll(); await delay(300);
+  if (await invoke("document.querySelectorAll('#conversation .answer').length") !== 2 || !conversation[1].html) throw new Error('Conversation history missing');
+  if ((await website.webContents.executeJavaScript('window.sentFiles'))[0].includes(removedName)) throw new Error('Deleted attachment was sent');
+  await invoke("document.querySelector('.response-scroll').scrollTop = 0");
+  await poll(); await delay(200);
+  if (await invoke("document.querySelector('.response-scroll').scrollTop") !== 0) throw new Error('Polling disturbed history scroll');
+  fs.writeFileSync(path.join(output,'history.png'),(await miniWindow.webContents.capturePage()).toPNG());
   const resized = await invoke("window.mini.resizeDrag({phase:'start',edge:'se'}).then(()=>window.mini.resizeDrag({dx:100,dy:90})).then(()=>window.mini.resizeDrag({phase:'end'}))");
   if (!resized.ok) throw new Error(resized.error);
   const remembered = miniWindow.getBounds();
@@ -426,14 +463,14 @@ async function smokeTest() {
   const font = await invoke("window.mini.appearance({fontSize:20})");
   if (!font.ok) throw new Error(font.error);
   await delay(400);
-  if (await invoke("getComputedStyle(document.getElementById('answer')).fontSize") !== '20px') throw new Error('Font setting did not apply');
+  if (await invoke("getComputedStyle(document.querySelector('#conversation .answer')).fontSize") !== '20px') throw new Error('Font setting did not apply');
   const saved = readSettings(app.getPath('userData'));
   if (saved.fontSize !== 20 || saved.window.width !== stable.width || saved.window.expandedHeight !== stable.height) throw new Error('Appearance was not persisted');
   fs.writeFileSync(path.join(output, 'resized.png'), (await miniWindow.webContents.capturePage()).toPNG());
   toggle(); if (miniWindow.isVisible()) throw new Error('Hide failed');
   toggle(); if (!miniWindow.isVisible()) throw new Error('Show failed');
   if (JSON.stringify(miniWindow.getBounds()) !== JSON.stringify(stable)) throw new Error('Show moved the remembered window');
-  fs.writeFileSync(path.join(output, 'smoke.json'), JSON.stringify({ passed: true, checks: ['onboarding', 'compact composer', 'official-page-shaped send and streaming', 'mode toggle', 'remote isolation', 'hide/show', 'delayed acknowledgement without duplicate send', 'edge resize preserved during polling', 'position memory', 'font change and settings persistence', 'image paste uploads PNG bytes', 'native system clipboard image upload', 'image preview and draft preservation', 'invalid image error releases upload lock', 'text paste unchanged', 'help and quit entry'] }, null, 2));
+  fs.writeFileSync(path.join(output, 'smoke.json'), JSON.stringify({ passed: true, checks: ['onboarding', 'compact composer', 'official-page-shaped send and streaming', 'mode toggle', 'remote isolation', 'hide/show', 'delayed acknowledgement without duplicate send', 'edge resize preserved during polling', 'position memory', 'font change and settings persistence', 'image paste uploads PNG bytes', 'image preview and draft preservation', 'invalid image error releases upload lock', 'text paste unchanged', 'help and quit entry', 'delete pending image on website and preserve draft', 'deleted image excluded from submission', 'two turns retained with scroll position', 'no explicit paste button'] }, null, 2));
   console.log('Smoke test passed. Screenshots: test-output/');
   const quitResult = await invoke('window.mini.quit()');
   if (!quitResult.ok) throw new Error('Quit bridge failed');

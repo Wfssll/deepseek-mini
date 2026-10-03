@@ -67,22 +67,29 @@ function render(state) {
     $(name).disabled = !ready || state.awaiting || state.website.generating;
   }
   $('attach').disabled = !ready || state.awaiting || state.uploading || pasting || state.website.generating;
-  $('paste-image').disabled = $('attach').disabled;
-  const existingFiles = [...$('files').children].map(el => el.textContent).join('\0');
-  if (existingFiles !== state.attachments.join('\0')) {
-    $('files').replaceChildren(...state.attachments.map(name => {
-      const chip = document.createElement('span'); chip.className = 'file-chip'; chip.textContent = name; return chip;
+  const busy = state.uploading || state.awaiting || state.website.generating;
+  const imageNames = new Set((state.pastedImages || []).map(image => image.name));
+  const key = JSON.stringify([state.attachments, busy]);
+  const removeButton = name => {
+    const button = document.createElement('button'); button.className = 'attachment-remove';
+    button.textContent = '×'; button.title = '删除附件'; button.setAttribute('aria-label', '删除附件 ' + name); button.disabled = busy;
+    button.onclick = () => call('removeAttachment', name).catch(error => toast(error.message)); return button;
+  };
+  if ($('files').dataset.key !== key) {
+    $('files').dataset.key = key;
+    $('files').replaceChildren(...state.attachments.filter(name => !imageNames.has(name)).map(name => {
+      const chip = document.createElement('span'); chip.className = 'file-chip';
+      const label = document.createElement('span'); label.textContent = name; label.title = name;
+      chip.append(label, removeButton(name)); return chip;
     }));
-  }
-  $('files').hidden = !state.attachments.length;
-  const imageKey = (state.pastedImages || []).map(image => image.name).join('|');
-  if ($('images').dataset.key !== imageKey) {
-    $('images').dataset.key = imageKey;
     $('images').replaceChildren(...(state.pastedImages || []).map(image => {
-      const preview = document.createElement('img'); preview.src = image.preview; preview.alt = image.name; preview.title = '已交给官网 · 等待解析后发送问题'; return preview;
+      const card = document.createElement('span'); card.className = 'attachment-preview';
+      const img = document.createElement('img'); img.src = image.preview; img.alt = image.name;
+      card.append(img, removeButton(image.name)); return card;
     }));
   }
-  $('images').hidden = !(state.pastedImages || []).length;
+  $('files').hidden = !$('files').children.length;
+  $('images').hidden = !$('images').children.length;
   const messages = {
     loading: '正在连接 DeepSeek…', login: '登录官网后，就可以在这里提问。',
     challenge: '请在官网窗口完成安全验证。', blocked: '官网暂时限制了访问，请稍后重新连接。',
@@ -91,23 +98,33 @@ function render(state) {
   $('connection').hidden = ready && !state.notice;
   $('connection-text').textContent = state.notice || messages[state.website.status] || '';
   $('connect-action').textContent = state.website.status === 'offline' || state.website.status === 'blocked' ? '重新连接 ↻' : '打开官网 ↗';
-  $('response').hidden = !state.prompt && !state.answerHTML && !state.awaiting;
+  $('response').hidden = !state.conversation.length;
   $('prompt').textContent = state.prompt;
   $('waiting').hidden = !state.awaiting;
   $('stop').hidden = !state.website.generating;
   $('answer-status').textContent = state.website.generating ? '官网正在生成 · 内容实时同步' : '回答与官网同步';
   $('copy').disabled = !state.answerHTML;
   $('new-chat').disabled = state.awaiting || state.website.generating;
-  if (state.answerHTML !== lastHTML) {
+  const historyKey = JSON.stringify(state.conversation);
+  if (historyKey !== lastHTML) {
     const scroll = document.querySelector('.response-scroll');
     const atEnd = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 50;
-    $('answer').innerHTML = DOMPurify.sanitize(state.answerHTML, {
+    const oldTop = scroll.scrollTop;
+    const sanitize = html => DOMPurify.sanitize(html, {
       USE_PROFILES: { html: true, svg: true, mathMl: true },
       FORBID_TAGS: ['style', 'form', 'input', 'button', 'iframe', 'object', 'embed', 'foreignObject'],
       FORBID_ATTR: ['style', 'srcset', 'id']
     });
-    lastHTML = state.answerHTML;
-    if (atEnd) scroll.scrollTop = scroll.scrollHeight;
+    $('conversation').replaceChildren(...state.conversation.map(turn => {
+      const section = document.createElement('section'); section.className = 'conversation-turn';
+      const question = document.createElement('p'); question.className = 'prompt'; question.textContent = turn.prompt;
+      const files = document.createElement('p'); files.className = 'turn-files'; files.textContent = turn.files.join(' · '); files.hidden = !turn.files.length;
+      const answer = document.createElement('article'); answer.className = 'answer'; answer.innerHTML = sanitize(turn.html);
+      section.append(question, files, answer); return section;
+    }));
+    $('answer').hidden = true;
+    lastHTML = historyKey;
+    scroll.scrollTop = atEnd ? scroll.scrollHeight : oldTop;
   }
   $('demo-label').hidden = !state.demo;
   sendEnabled(); fit();
@@ -147,7 +164,7 @@ $('question').addEventListener('keydown', event => {
 });
 async function pastePictures(files = []) {
   if (pasting) return;
-  pasting = true; sendEnabled(); $('paste-image').disabled = true; $('attach').disabled = true;
+  pasting = true; sendEnabled(); $('attach').disabled = true;
   try {
     if (!files.length) await call('pasteImage');
     for (const file of files) {
@@ -163,7 +180,6 @@ $('question').addEventListener('paste', event => {
   if (!hasImage) return;
   event.preventDefault(); pastePictures(files);
 });
-$('paste-image').addEventListener('click', () => pastePictures());
 $('question').addEventListener('input', growInput);
 $('send').addEventListener('click', submit);
 for (const [id, action] of [['login', 'login'], ['full', 'login'], ['spotlight', 'spotlight'], ['attach', 'attach'], ['new-chat', 'newChat'], ['stop', 'stop']]) {
@@ -173,8 +189,8 @@ for (const name of ['think', 'search']) $(name).addEventListener('click', () => 
   if (state[name] === null) toast('已点击官网选项，但当前网页未提供可确认的选中状态。可在官网查看。');
 }).catch(error => toast(error.message)));
 $('connect-action').addEventListener('click', () => call(['offline', 'blocked'].includes(current.website.status) ? 'reload' : 'login').catch(error => toast(error.message)));
-$('copy').addEventListener('click', () => call('copy', $('answer').innerText).then(() => toast('回答已复制')).catch(error => toast(error.message)));
-$('answer').addEventListener('click', event => {
+$('copy').addEventListener('click', () => call('copy', [...document.querySelectorAll('#conversation .answer')].at(-1)?.innerText || '').then(() => toast('回答已复制')).catch(error => toast(error.message)));
+$('conversation').addEventListener('click', event => {
   const link = event.target.closest('a');
   if (!link) return;
   event.preventDefault();
